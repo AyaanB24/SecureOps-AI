@@ -43,54 +43,100 @@ Build a platform that can automatically identify security vulnerabilities in Jav
 
 ---
 
-## 3. Initial Architecture
+## 3. System Architecture
 
-```text
-                    ┌──────────────────────────┐
-                    │   Java / Spring Boot     │
-                    │      Application         │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │       SecureOps API      │
-                    │      Spring Boot         │
-                    └────────────┬─────────────┘
-                                 │
-                    ┌────────────▼─────────────┐
-                    │   Security Analysis      │
-                    │        Engine             │
-                    └────────────┬─────────────┘
-                                 │
-              ┌──────────────────┼──────────────────┐
-              ▼                  ▼                  ▼
-       ┌────────────┐     ┌────────────┐     ┌────────────┐
-       │   SAST     │     │Dependency  │     │ Container  │
-       │   Tools    │     │  Analysis  │     │  Analysis  │
-       └─────┬──────┘     └─────┬──────┘     └─────┬──────┘
-             │                  │                  │
-             └──────────────────┼──────────────────┘
-                                ▼
-                    ┌──────────────────────────┐
-                    │   Finding Normalizer     │
-                    │ Severity / Risk / Source │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │      AI Analysis Layer   │
-                    │ Explanation / Priority /  │
-                    │ Remediation Suggestions   │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │       REST API            │
-                    │ Findings / Reports / Jobs │
-                    └──────────────────────────┘
+```mermaid
+flowchart TD
+    U["🌐 Internet Users"] --> NGINX["Nginx Reverse Proxy<br/>:80 / :443"]
+
+    subgraph NET["Backend Network — secureops-network"]
+        NGINX --> API["SecureOps API<br/>Spring Boot :8080"]
+
+        subgraph ROUTES["Backend Routes"]
+            AUTH["Auth Routes<br/>JWT + Spring Security"]
+            SCAN["Scan Routes"]
+            FIND["Finding Routes"]
+            REPORT["Report Routes"]
+        end
+
+        API --> AUTH
+        API --> SCAN
+        API --> FIND
+        API --> REPORT
+
+        SCAN --> ENGINE["Security Analysis Engine<br/>(async job)"]
+
+        subgraph ANALYSIS["Analysis Services"]
+            SAST["SAST Tools"]
+            DEP["Dependency Analysis"]
+            CONT["Container Analysis"]
+        end
+
+        ENGINE --> SAST
+        ENGINE --> DEP
+        ENGINE --> CONT
+
+        SAST --> NORM["Finding Normalizer<br/>Severity / Risk / Source"]
+        DEP --> NORM
+        CONT --> NORM
+
+        NORM --> AILAYER["AI Analysis Layer<br/>Explanation / Priority / Remediation"]
+
+        API --> DB[("PostgreSQL / MySQL")]
+        AILAYER --> DB
+        NORM --> DB
+        FIND --> DB
+        REPORT --> DB
+    end
+
+    DB --> VOL1[("Volume: db_data")]
+    ENGINE --> VOL2[("Volume: scan_workspace")]
+
+    style U fill:#0f172a,color:#fff,stroke:#38bdf8
+    style NGINX fill:#16a34a,color:#fff,stroke:#16a34a
+    style API fill:#16a34a,color:#fff,stroke:#16a34a
+    style DB fill:#0ea5e9,color:#fff,stroke:#0ea5e9
 ```
 
-> The architecture will evolve as individual modules are implemented. Components shown in the future-analysis layer are part of the planned roadmap, not completed functionality.
+**Network:** all backend services communicate over a shared bridge network (`secureops-network`), with named volumes for `db_data` and `scan_workspace` (temporary checked-out repos / scan artifacts) persisting across container restarts.
+
+> Components in the Analysis Services and AI Analysis Layer are part of the planned roadmap (Phase 3 / Phase 5), not completed functionality yet. The diagram reflects the target production topology.
+
+### Request Lifecycle — Submit Scan
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Nginx
+    participant API as Spring Boot API
+    participant Auth as Auth Middleware (JWT)
+    participant RBAC as Role Middleware (RBAC)
+    participant Engine as Analysis Engine
+    participant DB as Database
+
+    User->>Nginx: POST /api/v1/scans
+    Nginx->>API: proxy_pass /api/v1/scans
+    API->>Auth: Validate JWT
+    Auth-->>API: token OK
+    API->>RBAC: Check role / permissions
+    RBAC-->>API: authorized
+    API->>DB: Create Scan record (PENDING)
+    DB-->>API: scanId
+    API-->>Nginx: 202 Accepted { scanId }
+    Nginx-->>User: JSON response
+
+    API->>Engine: Trigger async analysis job
+    Engine->>Engine: Run SAST / Dependency / Container checks
+    Engine->>DB: Store normalized findings
+    Engine->>DB: Update Scan status → COMPLETED
+
+    User->>Nginx: GET /api/v1/scans/{scanId}/findings
+    Nginx->>API: proxy_pass
+    API->>DB: Query findings
+    DB-->>API: findings[]
+    API-->>Nginx: 200 OK
+    Nginx-->>User: JSON findings
+```
 
 ---
 
@@ -310,23 +356,29 @@ Spring Boot Application
 
 SecureOps itself will be containerized to provide a reproducible development and deployment environment.
 
-```text
-                 Docker Environment
+```mermaid
+flowchart TD
+    subgraph HOST["Docker Host"]
+        NGINX["nginx<br/>:80 / :443"]
 
-        ┌────────────────────────────┐
-        │       SecureOps API        │
-        │       Spring Boot          │
-        └─────────────┬──────────────┘
-                      │
-          ┌───────────┴───────────┐
-          ▼                       ▼
-   ┌──────────────┐       ┌──────────────┐
-   │   Database   │       │   Analysis   │
-   │              │       │   Services   │
-   └──────────────┘       └──────────────┘
+        subgraph NET["secureops-network (bridge)"]
+            NGINX --> API["secureops-api<br/>Spring Boot"]
+            API --> WORKER["analysis-worker<br/>SAST / Dependency / Container"]
+            API --> DB[("postgres / mysql")]
+            WORKER --> DB
+        end
+
+        DB -.-> V1[("db_data volume")]
+        WORKER -.-> V2[("scan_workspace volume")]
+    end
+
+    style NGINX fill:#16a34a,color:#fff
+    style API fill:#16a34a,color:#fff
+    style WORKER fill:#334155,color:#fff
+    style DB fill:#0ea5e9,color:#fff
 ```
 
-Docker Compose will initially be used for local development and service orchestration.
+Docker Compose will initially be used for local development and service orchestration, mirroring this topology (`nginx`, `secureops-api`, `analysis-worker`, `db`, plus named volumes) before migrating to Kubernetes in Phase 7.
 
 ---
 
