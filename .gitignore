@@ -1,0 +1,42 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+
+# Maven
+.m2/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+pom.xml.bak
+
+# Gradle
+.gradle/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local development
+.env
+application-local.properties
+
+# Node (if added later)
+node_modules/
+npm-debug.log
