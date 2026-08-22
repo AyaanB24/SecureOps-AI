@@ -1,29 +1,3 @@
-# SecureOps - DevSecOps Security Aggregation & Gating Platform
-
-## Quick Start
-
-```bash
-# Clone repository
-cd d:\SecureOps-AI\secureops
-
-# Build project
-mvn clean package -DskipTests
-
-# Run application
-java -jar target/secureops-0.0.1-SNAPSHOT.jar
-# OR
-mvn spring-boot:run
-```
-
-Application runs on `http://localhost:8080`
-
-Health check: `curl http://localhost:8080/api/health`
-
-Expected response:
-```json
-{"status":"UP","service":"SecureOps","database":"UP"}
-```
-
 # SecureOps AI
 
 ### AI-Assisted Security Assessment Platform for Java/Spring Boot Applications
