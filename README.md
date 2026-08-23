@@ -1,4 +1,5 @@
 # SecureOps AI
+
 ### AI-Assisted Security Assessment Platform for Java/Spring Boot Applications
 
 > **Status:** Ongoing — Architecture & Backend Foundation
@@ -26,9 +27,11 @@ SecureOps aims to provide a centralized backend workflow for analyzing Java appl
 ## 2. Project Goals
 
 ### Primary Goal
+
 Build a platform that can automatically identify security vulnerabilities in Java/Spring Boot applications.
 
 ### Initial Scope
+
 * Analyze Java/Spring Boot applications
 * Detect common security vulnerabilities
 * Collect and normalize security findings
@@ -42,113 +45,142 @@ Build a platform that can automatically identify security vulnerabilities in Jav
 
 ## 3. System Architecture
 
-```
-Internet Users
-    ↓
-Nginx Reverse Proxy (:80 / :443)
-    ↓
-┌─────────────────────────────────┐
-│ SecureOps Backend Network       │
-├─────────────────────────────────┤
-│                                 │
-│  Spring Boot API (:8080)        │
-│  ├── Auth Routes (JWT + Spring  │
-│  │   Security)                  │
-│  ├── Scan Routes                │
-│  ├── Finding Routes             │
-│  └── Report Routes              │
-│       ↓                         │
-│  Security Analysis Engine       │
-│  ├── SAST Tools                 │
-│  ├── Dependency Analysis        │
-│  └── Container Analysis         │
-│       ↓                         │
-│  Finding Normalizer             │
-│  (Severity / Risk / Source)     │
-│       ↓                         │
-│  AI Analysis Layer              │
-│  (Explanation / Priority /      │
-│   Remediation)                  │
-│       ↓                         │
-│  PostgreSQL / MySQL Database    │
-│                                 │
-│  Named Volumes:                 │
-│  - db_data                      │
-│  - scan_workspace               │
-│                                 │
-└─────────────────────────────────┘
+```mermaid
+flowchart TD
+    U["🌐 Internet Users"] --> NGINX["Nginx Reverse Proxy<br/>:80 / :443"]
+
+    subgraph NET["Backend Network — secureops-network"]
+        NGINX --> API["SecureOps API<br/>Spring Boot :8080"]
+
+        subgraph ROUTES["Backend Routes"]
+            AUTH["Auth Routes<br/>JWT + Spring Security"]
+            SCAN["Scan Routes"]
+            FIND["Finding Routes"]
+            REPORT["Report Routes"]
+        end
+
+        API --> AUTH
+        API --> SCAN
+        API --> FIND
+        API --> REPORT
+
+        SCAN --> ENGINE["Security Analysis Engine<br/>(async job)"]
+
+        subgraph ANALYSIS["Analysis Services"]
+            SAST["SAST Tools"]
+            DEP["Dependency Analysis"]
+            CONT["Container Analysis"]
+        end
+
+        ENGINE --> SAST
+        ENGINE --> DEP
+        ENGINE --> CONT
+
+        SAST --> NORM["Finding Normalizer<br/>Severity / Risk / Source"]
+        DEP --> NORM
+        CONT --> NORM
+
+        NORM --> AILAYER["AI Analysis Layer<br/>Explanation / Priority / Remediation"]
+
+        API --> DB[("PostgreSQL / MySQL")]
+        AILAYER --> DB
+        NORM --> DB
+        FIND --> DB
+        REPORT --> DB
+    end
+
+    DB --> VOL1[("Volume: db_data")]
+    ENGINE --> VOL2[("Volume: scan_workspace")]
+
+    style U fill:#0f172a,color:#fff,stroke:#38bdf8
+    style NGINX fill:#16a34a,color:#fff,stroke:#16a34a
+    style API fill:#16a34a,color:#fff,stroke:#16a34a
+    style DB fill:#0ea5e9,color:#fff,stroke:#0ea5e9
 ```
 
-All backend services communicate over a shared bridge network (`secureops-network`), with named volumes for `db_data` and `scan_workspace` persisting across container restarts.
+**Network:** all backend services communicate over a shared bridge network (`secureops-network`), with named volumes for `db_data` and `scan_workspace` (temporary checked-out repos / scan artifacts) persisting across container restarts.
 
-> Components in the Analysis Services and AI Analysis Layer are part of the planned roadmap (Phase 3 / Phase 5), not completed functionality yet.
+> Components in the Analysis Services and AI Analysis Layer are part of the planned roadmap (Phase 3 / Phase 5), not completed functionality yet. The diagram reflects the target production topology.
+
+### Request Lifecycle — Submit Scan
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Nginx
+    participant API as Spring Boot API
+    participant Auth as Auth Middleware (JWT)
+    participant RBAC as Role Middleware (RBAC)
+    participant Engine as Analysis Engine
+    participant DB as Database
+
+    User->>Nginx: POST /api/v1/scans
+    Nginx->>API: proxy_pass /api/v1/scans
+    API->>Auth: Validate JWT
+    Auth-->>API: token OK
+    API->>RBAC: Check role / permissions
+    RBAC-->>API: authorized
+    API->>DB: Create Scan record (PENDING)
+    DB-->>API: scanId
+    API-->>Nginx: 202 Accepted { scanId }
+    Nginx-->>User: JSON response
+
+    API->>Engine: Trigger async analysis job
+    Engine->>Engine: Run SAST / Dependency / Container checks
+    Engine->>DB: Store normalized findings
+    Engine->>DB: Update Scan status → COMPLETED
+
+    User->>Nginx: GET /api/v1/scans/{scanId}/findings
+    Nginx->>API: proxy_pass
+    API->>DB: Query findings
+    DB-->>API: findings[]
+    API-->>Nginx: 200 OK
+    Nginx-->>User: JSON findings
+```
 
 ---
 
 ## 4. Backend Architecture
 
-The core platform is implemented using **Java and Spring Boot**.
+The core platform will be implemented using **Java and Spring Boot**.
 
-```
+```text
 secureops/
+│
 ├── src/main/java/com/secureops/
-│   ├── project/              (Phase 1 ✅)
-│   │   ├── Project.java
-│   │   ├── ProjectRepository.java
-│   │   ├── ProjectService.java
-│   │   ├── ProjectController.java
-│   │   ├── ProjectNotFoundException.java
-│   │   └── dto/
-│   │       ├── CreateProjectRequest.java
-│   │       └── ProjectResponse.java
 │   │
-│   ├── pipeline/             (Phase 2 - Coming)
-│   │   ├── Pipeline.java
-│   │   ├── PipelineRepository.java
-│   │   ├── PipelineService.java
-│   │   └── PipelineController.java
+│   ├── controller/
+│   │   ├── ScanController.java
+│   │   ├── FindingController.java
+│   │   └── ReportController.java
 │   │
-│   ├── scan/                 (Phase 3 - Coming)
-│   │   ├── Scan.java
-│   │   ├── ScanRepository.java
+│   ├── service/
 │   │   ├── ScanService.java
-│   │   └── ScanController.java
-│   │
-│   ├── report/               (Phase 4 - Coming)
-│   │   ├── Report.java
+│   │   ├── SecurityAnalysisService.java
+│   │   ├── FindingService.java
 │   │   └── ReportService.java
 │   │
-│   ├── finding/              (Phase 5 - Coming)
+│   ├── repository/
+│   │   ├── ScanRepository.java
+│   │   └── FindingRepository.java
+│   │
+│   ├── model/
+│   │   ├── Scan.java
 │   │   ├── Finding.java
-│   │   ├── FindingRepository.java
-│   │   └── FindingService.java
+│   │   └── Report.java
 │   │
-│   ├── policy/               (Phase 8 - Coming)
-│   │   ├── Policy.java
-│   │   └── PolicyService.java
+│   ├── dto/
+│   │   ├── ScanRequest.java
+│   │   ├── ScanResponse.java
+│   │   └── FindingResponse.java
 │   │
-│   ├── decision/             (Phase 9 - Coming)
-│   │   ├── SecurityDecision.java
-│   │   └── DecisionEngine.java
+│   ├── security/
+│   │   └── SecurityConfig.java
 │   │
-│   ├── common/
-│   │   ├── controller/
-│   │   │   ├── HealthController.java
-│   │   │   └── ...
-│   │   ├── dto/
-│   │   │   ├── HealthResponse.java
-│   │   │   └── ...
-│   │   ├── exception/
-│   │   │   ├── GlobalExceptionHandler.java
-│   │   │   └── ErrorResponse.java
-│   │   ├── service/
-│   │   │   └── HealthService.java
-│   │   └── ...
-│   │
-│   └── SecureopsApplication.java
+│   └── SecureOpsApplication.java
 │
 ├── src/main/resources/
-│   └── application.properties
+│   └── application.yml
 │
 ├── Dockerfile
 ├── docker-compose.yml
@@ -158,8 +190,14 @@ secureops/
 
 The architecture follows a standard layered Spring Boot structure:
 
-```
-Controller → Service → Repository → Database
+```text
+Controller
+    ↓
+Service
+    ↓
+Repository
+    ↓
+Database
 ```
 
 Security-analysis components will be separated from the API layer so that additional security tools can be integrated without tightly coupling them to the REST controllers.
@@ -169,51 +207,62 @@ Security-analysis components will be separated from the API layer so that additi
 ## 5. Core Workflow
 
 ### Step 1 — Submit Application
+
 A user submits a Java/Spring Boot application or repository for analysis.
 
+```http
+POST /api/v1/scans
 ```
-POST /api/projects (Phase 1)
-POST /api/pipelines (Phase 2)
-POST /api/scans (Phase 3)
+
+Example:
+
+```json
+{
+  "projectName": "sample-spring-app",
+  "repositoryUrl": "repository-url"
+}
 ```
 
 ### Step 2 — Create Scan
+
 SecureOps creates a scan record and assigns it a unique scan ID.
 
-```
+```text
 Scan
-├── ID
-├── Project
-├── Pipeline
-├── Status
-├── CreatedAt
-└── CompletedAt
+ ├── ID
+ ├── Project
+ ├── Status
+ ├── CreatedAt
+ └── CompletedAt
 ```
 
 ### Step 3 — Security Analysis
+
 The analysis engine executes the configured security checks against the application.
 
 Initially, the focus will be on **Java/Spring Boot security analysis**.
 
 ### Step 4 — Normalize Findings
+
 Different security tools can produce different output formats.
 
-SecureOps normalizes them into a common finding model.
+SecureOps will normalize them into a common finding model.
 
-```
+```text
 Finding
-├── Title
-├── Description
-├── Severity (CRITICAL, HIGH, MEDIUM, LOW)
-├── Category
-├── Source (Tool: Trivy, Semgrep, OWASP)
-├── File
-├── Line
-└── Remediation
+ ├── Title
+ ├── Description
+ ├── Severity
+ ├── Category
+ ├── Source
+ ├── File
+ ├── Line
+ └── Remediation
 ```
 
 ### Step 5 — AI Analysis
-The AI layer consumes normalized findings and provides:
+
+The AI layer will consume normalized findings and provide:
 
 * Vulnerability explanation
 * Risk interpretation
@@ -221,43 +270,35 @@ The AI layer consumes normalized findings and provides:
 * Finding prioritization
 
 ### Step 6 — Report
-Final results are available through REST APIs and eventually through a report/dashboard layer.
+
+The final results will be available through REST APIs and eventually through a report/dashboard layer.
 
 ---
 
 ## 6. Initial REST API Design
 
-### Project API (Phase 1 ✅)
-```
-POST   /api/projects                 → 201 Created
-GET    /api/projects                 → 200 OK
-GET    /api/projects/{projectId}     → 200 OK / 404
+### Scan API
+
+```http
+POST   /api/v1/scans
+GET    /api/v1/scans
+GET    /api/v1/scans/{scanId}
 ```
 
-### Pipeline API (Phase 2 - Coming)
-```
-POST   /api/projects/{projectId}/pipelines
-GET    /api/projects/{projectId}/pipelines
-GET    /api/pipelines/{pipelineId}
+### Findings API
+
+```http
+GET    /api/v1/scans/{scanId}/findings
+GET    /api/v1/findings/{findingId}
 ```
 
-### Scan API (Phase 3 - Coming)
-```
-POST   /api/pipelines/{pipelineId}/scans
-GET    /api/scans/{scanId}
+### Reports API
+
+```http
+GET    /api/v1/scans/{scanId}/report
 ```
 
-### Findings API (Phase 5 - Coming)
-```
-GET    /api/scans/{scanId}/findings
-GET    /api/findings/{findingId}
-```
-
-### Reports API (Phase 10 - Coming)
-```
-GET    /api/scans/{scanId}/report
-GET    /api/scans/{scanId}/decision
-```
+The API design will evolve as the backend implementation progresses.
 
 ---
 
@@ -266,50 +307,48 @@ GET    /api/scans/{scanId}/decision
 The security engine is planned to support multiple analysis categories.
 
 ### Source Code Analysis
+
 Identify vulnerabilities in application source code.
 
 Potential focus areas:
+
 * Injection vulnerabilities
 * Insecure API usage
 * Authentication/authorization issues
 * Hardcoded secrets
 * Unsafe coding patterns
 
-**Tools:** Semgrep
-
 ### Dependency Analysis
+
 Analyze project dependencies for known vulnerabilities.
 
 For Maven-based Spring Boot applications:
 
-```
+```text
 pom.xml
-  ↓
+   ↓
 Dependency Analysis
-  ↓
+   ↓
 Known Vulnerabilities
-  ↓
+   ↓
 Normalized Findings
 ```
 
-**Tools:** OWASP Dependency-Check
-
 ### Container Analysis
+
 The platform will eventually analyze Docker images associated with the application.
 
-```
+```text
 Spring Boot Application
-  ↓
-Docker Build
-  ↓
-Docker Image
-  ↓
-Security Analysis
-  ↓
-Vulnerability Findings
+        ↓
+     Docker Build
+        ↓
+    Docker Image
+        ↓
+ Security Analysis
+        ↓
+ Vulnerability Findings
 ```
-
-**Tools:** Trivy
 
 ---
 
@@ -317,19 +356,29 @@ Vulnerability Findings
 
 SecureOps itself will be containerized to provide a reproducible development and deployment environment.
 
-```
-Docker Host
-├── nginx (:80 / :443)
-├── secureops-api (Spring Boot)
-├── analysis-worker (SAST / Dependency / Container)
-├── postgresql / mysql
-│
-Named Volumes:
-├── db_data
-└── scan_workspace
+```mermaid
+flowchart TD
+    subgraph HOST["Docker Host"]
+        NGINX["nginx<br/>:80 / :443"]
+
+        subgraph NET["secureops-network (bridge)"]
+            NGINX --> API["secureops-api<br/>Spring Boot"]
+            API --> WORKER["analysis-worker<br/>SAST / Dependency / Container"]
+            API --> DB[("postgres / mysql")]
+            WORKER --> DB
+        end
+
+        DB -.-> V1[("db_data volume")]
+        WORKER -.-> V2[("scan_workspace volume")]
+    end
+
+    style NGINX fill:#16a34a,color:#fff
+    style API fill:#16a34a,color:#fff
+    style WORKER fill:#334155,color:#fff
+    style DB fill:#0ea5e9,color:#fff
 ```
 
-Docker Compose will initially be used for local development and service orchestration before migrating to Kubernetes in Phase 7.
+Docker Compose will initially be used for local development and service orchestration, mirroring this topology (`nginx`, `secureops-api`, `analysis-worker`, `db`, plus named volumes) before migrating to Kubernetes in Phase 7.
 
 ---
 
@@ -337,26 +386,33 @@ Docker Compose will initially be used for local development and service orchestr
 
 The project will gradually introduce CI/CD automation.
 
-```
+```text
 Developer
-  ↓
+    │
+    ▼
 Git Push
-  ↓
+    │
+    ▼
 GitHub
-  ↓
+    │
+    ▼
 CI Pipeline
-├── Build
-├── Test
-├── Code Quality
-├── Security Scan
-└── Docker Build
-  ↓
-Docker Image
-  ↓
-Deployment
+    │
+    ├── Build
+    ├── Test
+    ├── Code Quality
+    ├── Security Scan
+    └── Docker Build
+            │
+            ▼
+       Docker Image
+            │
+            ▼
+       Deployment
 ```
 
 Planned DevOps technologies include:
+
 * GitHub
 * Docker
 * Docker Compose
@@ -370,33 +426,36 @@ Planned DevOps technologies include:
 ## 10. Technology Stack
 
 ### Backend
-* Java 21
-* Spring Boot 4.1.1
-* Spring Web
+
+* Java
+* Spring Boot
+* Spring Security
 * Spring Data JPA
-* Spring Security (Phase 6+)
-* Maven
 * REST APIs
-* Jakarta Validation
+* Maven
 
 ### Database
-* PostgreSQL 14+
+
+* MySQL / PostgreSQL
 
 ### Security
-* SAST (Semgrep)
-* Dependency vulnerability scanning (OWASP Dependency-Check)
-* Container scanning (Trivy)
+
+* SAST
+* Dependency vulnerability scanning
+* Container scanning
 * Secret detection
 
 ### DevOps
+
 * Git
 * GitHub
 * Docker
 * Docker Compose
-* Jenkins / GitHub Actions
+* Jenkins
 * Kubernetes
 
-### AI (Future)
+### AI
+
 * LLM-based vulnerability explanation
 * Risk prioritization
 * Remediation assistance
@@ -405,192 +464,94 @@ Planned DevOps technologies include:
 
 ## 11. Development Roadmap
 
-### Phase 0 — Foundation ✅
-- [x] Define project scope
-- [x] Create comprehensive README
-- [x] Define initial architecture
-- [x] Initialize Spring Boot project
-- [x] Configure Maven
-- [x] Create package structure
-- [x] Health check endpoint
+### Phase 1 — Foundation
 
-### Phase 1 — Project Management ✅
-- [x] Project entity
-- [x] Project repository (Spring Data JPA)
-- [x] Project service
-- [x] Project controller
-- [x] Request/response DTOs
-- [x] Validation and error handling
-- [x] Multi-project isolation foundation
+* [x] Define project scope
+* [x] Create README
+* [x] Define initial architecture
+* [x] Define technology stack
+* [ ] Initialize Spring Boot project
+* [ ] Configure Maven
+* [ ] Create package structure
 
-### Phase 2 — Pipeline Management (Coming)
-- [ ] Pipeline entity
-- [ ] Pipeline repository
-- [ ] Pipeline service
-- [ ] Pipeline controller
-- [ ] Pipeline DTOs
+### Phase 2 — Backend Core
 
-### Phase 3 — Scan Management (Coming)
-- [ ] Scan entity
-- [ ] Scan repository
-- [ ] Scan service
-- [ ] Scan controller
-- [ ] Scan DTOs
+* [ ] Design database schema
+* [ ] Implement Scan entity
+* [ ] Implement Finding entity
+* [ ] Implement REST APIs
+* [ ] Add validation
+* [ ] Add global exception handling
+* [ ] Add API documentation
 
-### Phase 4 — Report Ingestion (Coming)
-- [ ] Report entity
-- [ ] Report upload endpoints
-- [ ] Support for Trivy JSON
+### Phase 3 — Security Engine
 
-### Phase 5 — Finding Normalization (Coming)
-- [ ] Finding entity
-- [ ] Finding repository
-- [ ] Finding service
-- [ ] Common Finding model
+* [ ] Integrate source-code analysis
+* [ ] Integrate dependency analysis
+* [ ] Normalize security findings
+* [ ] Implement severity classification
+* [ ] Store scan results
 
-### Phase 6 — Trivy Parser (Coming)
-- [ ] Parse Trivy JSON reports
-- [ ] Extract vulnerabilities
-- [ ] Normalize to Finding model
+### Phase 4 — Docker
 
-### Phase 7 — Risk Engine (Coming)
-- [ ] Deterministic risk scoring
-- [ ] Severity weighting (CRITICAL=10, HIGH=7, MEDIUM=4, LOW=1)
-- [ ] Risk calculation
+* [ ] Create SecureOps Dockerfile
+* [ ] Create Docker Compose setup
+* [ ] Containerize analysis components
+* [ ] Test isolated scan execution
 
-### Phase 8 — Policy Engine (Coming)
-- [ ] Policy entity
-- [ ] Configurable rules
-- [ ] Policy evaluation
+### Phase 5 — AI Layer
 
-### Phase 9 — Security Decision (Coming)
-- [ ] Decision entity
-- [ ] PASS/BLOCK logic
-- [ ] Reason generation
+* [ ] Integrate LLM
+* [ ] Generate vulnerability explanations
+* [ ] Generate remediation suggestions
+* [ ] Implement risk prioritization
 
-### Phase 10 — End-to-End Demo (Coming)
-- [ ] Complete Postman workflow
-- [ ] Multiple security tools
-- [ ] Final reporting
+### Phase 6 — CI/CD & DevSecOps
 
-### Phase 11 — Docker (Coming)
-- [ ] Create Dockerfile
-- [ ] Docker Compose setup
-- [ ] Container orchestration
+* [ ] Create CI pipeline
+* [ ] Automate security scans
+* [ ] Build Docker images
+* [ ] Push images to registry
+* [ ] Deploy SecureOps
 
-### Phase 12 — CI/CD (Coming)
-- [ ] GitHub Actions pipeline
-- [ ] Automated security scans
-- [ ] Image build and push
+### Phase 7 — Kubernetes
 
-### Phase 13 — AI Layer (Coming)
-- [ ] Integrate LLM
-- [ ] Vulnerability explanation
-- [ ] Remediation suggestions
-- [ ] Risk prioritization
-
-### Phase 14 — Kubernetes (Coming)
-- [ ] Kubernetes manifests
-- [ ] Services and ConfigMaps
-- [ ] Persistent storage
-- [ ] Production deployment
+* [ ] Create Kubernetes manifests
+* [ ] Configure Services
+* [ ] Configure Secrets
+* [ ] Configure persistent storage
+* [ ] Deploy SecureOps on Kubernetes
 
 ---
 
-## 12. Current Implementation Status
+## 12. Current Status
 
-**Current Phase: Phase 1 — Project Management ✅**
+**Current phase: Phase 1 — Foundation**
 
-### Completed
-- Phase 0: Spring Boot foundation with health check
-- Phase 1: Project management with multi-project isolation
+The project has currently been scoped around analyzing **Java/Spring Boot applications**, with **Java/Spring Boot as the core backend technology** and Docker as the initial deployment target.
 
-### In Progress
-- None (waiting for next milestone)
-
-### Upcoming
-- Phase 2: Pipeline management
-- Phase 3: Scan management
-- Phase 4+: Security analysis and reporting
+The next implementation milestone is to build the Spring Boot backend and establish the scan → analysis → finding workflow before adding AI and advanced DevSecOps automation.
 
 ---
 
-## 13. Quick Start
-
-### Prerequisites
-- Java 21+
-- Maven 3.8+
-- PostgreSQL 14+
-
-### Build & Run
-```bash
-cd secureops
-mvn clean package -DskipTests
-java -jar target/secureops-0.0.1-SNAPSHOT.jar
-```
-
-### Test Health Endpoint
-```bash
-curl http://localhost:8080/api/health
-```
-
-Expected response:
-```json
-{"status":"UP","service":"SecureOps","database":"UP"}
-```
-
-### Test Project API
-```bash
-# Create project
-curl -X POST http://localhost:8080/api/projects \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Payment API","repositoryUrl":"https://github.com/company/payment-api"}'
-
-# List projects
-curl http://localhost:8080/api/projects
-
-# Get specific project
-curl http://localhost:8080/api/projects/{projectId}
-```
-
----
-
-## 14. Long-Term Vision
+## 13. Long-Term Vision
 
 SecureOps AI is intended to evolve from a security-analysis backend into a complete DevSecOps platform where a developer can submit an application and receive a centralized security assessment containing:
 
-```
+```text
 Application
-  ↓
+     ↓
 Automated Security Analysis
-  ↓
+     ↓
 Vulnerability Detection
-  ↓
+     ↓
 Risk Prioritization
-  ↓
+     ↓
 AI Explanation
-  ↓
+     ↓
 Remediation Guidance
-  ↓
+     ↓
 Secure Deployment
 ```
 
 The long-term objective is to make security analysis an integrated part of the application development and deployment lifecycle rather than a separate manual activity.
-
----
-
-## 15. Contributing
-
-This project is currently in active development. Contributions are welcome once the foundation stabilizes.
-
----
-
-## 16. License
-
-TBD
-
----
-
-## 17. Contact
-
-For questions or collaboration, please open an issue on GitHub.
