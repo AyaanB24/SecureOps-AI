@@ -27,8 +27,14 @@ public class ProjectService {
      *
      * @param request CreateProjectRequest with name and optional repositoryUrl
      * @return ProjectResponse containing created project data
+     * @throws DuplicateProjectException if a project with the same name already exists
      */
     public ProjectResponse createProject(CreateProjectRequest request) {
+        // Check if project with this name already exists
+        if (projectRepository.findByName(request.getName()).isPresent()) {
+            throw new DuplicateProjectException(request.getName());
+        }
+
         Project project = new Project(request.getName(), request.getRepositoryUrl());
         Project saved = projectRepository.save(project);
         return ProjectResponse.fromEntity(saved);

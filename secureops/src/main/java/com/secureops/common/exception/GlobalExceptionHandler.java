@@ -1,6 +1,9 @@
 package com.secureops.common.exception;
 
 import com.secureops.project.ProjectNotFoundException;
+import com.secureops.project.DuplicateProjectException;
+import com.secureops.pipeline.PipelineNotFoundException;
+import com.secureops.pipeline.DuplicatePipelineException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,27 @@ public class GlobalExceptionHandler {
         log.warn("Project not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(DuplicateProjectException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateProject(DuplicateProjectException ex) {
+        log.warn("Duplicate project: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("DUPLICATE", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(PipelineNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePipelineNotFound(PipelineNotFoundException ex) {
+        log.warn("Pipeline not found: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(DuplicatePipelineException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePipeline(DuplicatePipelineException ex) {
+        log.warn("Duplicate pipeline: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("DUPLICATE", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
