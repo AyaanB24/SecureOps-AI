@@ -1,73 +1,90 @@
 # SecureOps Implementation Log
 
-This file tracks what was implemented in each phase, what files/folders were created, and what they do.
+This file tracks all phases implemented, files created per phase, and what each component does.
 
 ---
 
 ## Phase 0: Foundation ✅
 
 **What was implemented:**
-- Spring Boot 4.1.1 application setup with Java 21 and Maven
-- PostgreSQL database connectivity with HikariCP pool
-- Health check endpoint to verify application and database status
+- Spring Boot 4.1.1 application with Java 21 and Maven
+- PostgreSQL database connectivity with HikariCP connection pool
+- Health check endpoint returning application and database status
 
 **Files Created:**
 ```
 secureops/
-├── pom.xml (Maven configuration with Spring Boot, JPA, PostgreSQL drivers)
+├── pom.xml (Maven dependencies: Spring Boot, JPA, PostgreSQL)
 ├── src/main/resources/
-│   └── application.properties (Database config, Hibernate DDL, logging)
-├── src/main/java/com/secureops/
-│   ├── SecureopsApplication.java (Spring Boot entry point)
-│   └── common/
-│       ├── controller/HealthController.java (GET /api/health endpoint)
-│       ├── dto/HealthResponse.java (JSON response model)
-│       ├── service/HealthService.java (Health check logic)
-│       └── exception/
-│           ├── GlobalExceptionHandler.java (Centralized error handling)
-│           └── ErrorResponse.java (Error response model)
+│   └── application.properties (DB config, Hibernate DDL=update, logging)
+└── src/main/java/com/secureops/
+    ├── SecureopsApplication.java (Spring Boot entry point)
+    └── common/
+        ├── controller/HealthController.java (GET /api/health)
+        ├── dto/HealthResponse.java (JSON response: status, service, database)
+        ├── service/HealthService.java (Health check logic)
+        └── exception/
+            ├── GlobalExceptionHandler.java (Centralized exception handling)
+            └── ErrorResponse.java (Error response model)
 ```
 
-**Purpose:**
-- HealthResponse: Returns {"status":"UP","service":"SecureOps","database":"UP"}
-- HealthService: Checks database connectivity
-- GlobalExceptionHandler: Converts exceptions to HTTP error responses
-- application.properties: Configures PostgreSQL connection, Hibernate table auto-creation
+**What Each File Does:**
+- `pom.xml`: Declares Spring Boot dependencies and Java 21 target
+- `application.properties`: Configures PostgreSQL connection string, Hibernate auto-table-creation
+- `SecureopsApplication.java`: Main entry point; bootstraps Spring application
+- `HealthController.java`: Handles GET /api/health requests
+- `HealthResponse.java`: DTO with status, service, database fields
+- `HealthService.java`: Checks database connectivity status
+- `GlobalExceptionHandler.java`: Catches exceptions, converts to HTTP error responses
+- `ErrorResponse.java`: Generic error response DTO (error_code, message)
 
 ---
 
 ## Phase 1: Project Management ✅
 
 **What was implemented:**
-- Project entity with UUID primary key and database table auto-creation
+- Project entity with UUID primary key
 - CRUD operations for projects (create, list, get by ID)
+- Unique constraint on project name (prevents duplicates)
 - Multi-project isolation foundation for future phases
-- Complete REST API for project management
 
 **Files Created:**
 ```
 secureops/src/main/java/com/secureops/project/
-├── Project.java (JPA entity with UUID, name, repositoryUrl, createdAt)
-├── ProjectRepository.java (Spring Data JPA CRUD interface)
-├── ProjectService.java (Business logic: create, list, get)
-├── ProjectController.java (REST endpoints)
-├── ProjectNotFoundException.java (Exception for missing projects)
+├── Project.java (Entity: id, name, repositoryUrl, createdAt, @Unique(name))
+├── ProjectRepository.java (Spring Data JPA with findByName())
+├── ProjectService.java (CRUD with duplicate check)
+├── ProjectController.java (REST endpoints: POST, GET all, GET by ID)
+├── ProjectNotFoundException.java (Exception for 404s)
+├── DuplicateProjectException.java (Exception for duplicates)
 └── dto/
-    ├── CreateProjectRequest.java (DTO for POST request with validation)
+    ├── CreateProjectRequest.java (DTO for POST with validation)
     └── ProjectResponse.java (DTO for API responses)
 ```
 
-**API Endpoints:**
-- `POST /api/projects` → Create project (201 Created)
-- `GET /api/projects` → List all projects (200 OK)
-- `GET /api/projects/{projectId}` → Get specific project (200 OK / 404 Not Found)
+**What Each File Does:**
+- `Project.java`: JPA entity representing a project; unique constraint on name
+- `ProjectRepository.java`: Data access layer with findByName() for duplicate checking
+- `ProjectService.java`: Business logic; validates no duplicate before save
+- `ProjectController.java`: Routes /api/projects endpoints to service
+- `ProjectNotFoundException.java`: Exception thrown if project not found
+- `DuplicateProjectException.java`: Exception thrown if project name already exists
+- `CreateProjectRequest.java`: Validates name required, 1-255 chars
+- `ProjectResponse.java`: Returns id, name, repositoryUrl, createdAt
 
-**Purpose:**
-- Project: Top-level entity; each project is isolated from others
-- ProjectRepository: Handles all database queries
-- ProjectService: Enforces business rules and validation
-- ProjectController: Routes HTTP requests to service layer
-- DTOs: Separates API contract from database entity
+**API Endpoints:**
+- `POST /api/projects` → 201 Created
+- `GET /api/projects` → 200 OK
+- `GET /api/projects/{projectId}` → 200 OK / 404
+
+**Database Relationship:**
+```
+project table (root level)
+├── id (UUID PK)
+├── name (VARCHAR UNIQUE)
+├── repository_url (VARCHAR)
+└── created_at (TIMESTAMP)
+```
 
 ---
 
@@ -75,70 +92,173 @@ secureops/src/main/java/com/secureops/project/
 
 **What was implemented:**
 - Pipeline entity with foreign key to Project
-- CI/CD provider enum (JENKINS, GITHUB_ACTIONS, GITLAB_CI, AZURE_PIPELINES, CIRCLECI, TRAVIS_CI)
-- CRUD operations for pipelines with project isolation
-- REST API for pipeline management
-- Multi-project isolation enforced through foreign keys
+- PipelineProvider enum (JENKINS, GITHUB_ACTIONS, GITLAB_CI, AZURE_PIPELINES, CIRCLECI, TRAVIS_CI)
+- CRUD operations with project ownership validation
+- Unique constraint on (project_id, job_name, build_number)
+- Multi-project isolation maintained
 
 **Files Created:**
 ```
 secureops/src/main/java/com/secureops/pipeline/
-├── Pipeline.java (JPA entity with project_id FK, provider enum, job details)
-├── PipelineProvider.java (Enum for CI/CD providers)
-├── PipelineRepository.java (Spring Data JPA with findByProjectId query)
-├── PipelineService.java (Business logic: create with project validation, list, get)
+├── Pipeline.java (Entity: id, project FK, provider, jobName, buildNumber, branch, commitSha, createdAt)
+├── PipelineProvider.java (Enum: JENKINS, GITHUB_ACTIONS, GITLAB_CI, AZURE_PIPELINES, CIRCLECI, TRAVIS_CI)
+├── PipelineRepository.java (Spring Data JPA with findByProjectId, findByProjectIdAndJobNameAndBuildNumber)
+├── PipelineService.java (CRUD with project validation and duplicate check)
 ├── PipelineController.java (REST endpoints for pipeline management)
-├── PipelineNotFoundException.java (Exception for missing pipelines)
+├── PipelineNotFoundException.java (Exception for 404s)
+├── DuplicatePipelineException.java (Exception for duplicates)
 └── dto/
     ├── CreatePipelineRequest.java (DTO for POST with validation)
     └── PipelineResponse.java (DTO for API responses)
-
-Modified:
-└── common/exception/GlobalExceptionHandler.java (Added PipelineNotFoundException handler)
 ```
 
-**API Endpoints:**
-- `POST /api/projects/{projectId}/pipelines` → Create pipeline for project (201 Created)
-- `GET /api/projects/{projectId}/pipelines` → List pipelines for project (200 OK)
-- `GET /api/pipelines/{pipelineId}` → Get specific pipeline (200 OK / 404 Not Found)
+**What Each File Does:**
+- `Pipeline.java`: JPA entity; foreign key to Project; unique on (project_id, job_name, build_number)
+- `PipelineProvider.java`: Enum for CI/CD tool types
+- `PipelineRepository.java`: Custom queries for project-based filtering
+- `PipelineService.java`: Validates project exists before creating pipeline; checks for duplicates
+- `PipelineController.java`: Routes /api/projects/{projectId}/pipelines endpoints
+- `PipelineNotFoundException.java`: 404 exception
+- `DuplicatePipelineException.java`: 409 duplicate exception
+- `CreatePipelineRequest.java`: Validates provider, jobName, buildNumber, branch required
+- `PipelineResponse.java`: Returns id, projectId, provider, jobName, buildNumber, branch, commitSha, createdAt
 
-**Purpose:**
-- Pipeline: Child entity representing a CI/CD job; belongs to exactly one project
-- PipelineProvider: Normalizes CI/CD tool names (JENKINS, GITHUB_ACTIONS, etc.)
-- PipelineRepository: Custom query to filter pipelines by project
-- PipelineService: Validates project existence before creating pipeline; enforces isolation
-- PipelineController: Routes pipeline HTTP requests
-- Foreign Key Constraint: `ON DELETE CASCADE` ensures data integrity
+**API Endpoints:**
+- `POST /api/projects/{projectId}/pipelines` → 201 Created
+- `GET /api/projects/{projectId}/pipelines` → 200 OK
+- `GET /api/pipelines/{pipelineId}` → 200 OK / 404
 
 **Database Relationship:**
 ```
-project (1) ─────────── (N) pipeline
-    id ◄──── project_id
-
-Example:
-Project 1 (Payment API) has pipelines: payment-api-pipeline, payment-api-tests
-Project 2 (Job Portal) has pipelines: job-portal-pipeline
+project (1) ────── (N) pipeline
+    ↑                       |
+    └─── FK project_id ─────┘
+    
+Unique constraint: (project_id, job_name, build_number)
+- Prevents duplicate job+build in same project
+- Allows same job+build in different projects
 ```
 
 ---
 
-## Documentation Files
+## Phase 3: Scan Management ✅
 
-| File | Purpose |
+**What was implemented:**
+- Scan entity with dual foreign keys (Project, Pipeline)
+- Environment enum (DEVELOPMENT, STAGING, PRODUCTION)
+- ScanStatus enum (CREATED, PROCESSING, COMPLETED, FAILED)
+- Three-step validation preventing cross-project data leakage
+- One scan per pipeline-project combo (unique constraint)
+
+**Files Created:**
+```
+secureops/src/main/java/com/secureops/scan/
+├── Environment.java (Enum: DEVELOPMENT, STAGING, PRODUCTION)
+├── ScanStatus.java (Enum: CREATED, PROCESSING, COMPLETED, FAILED)
+├── Scan.java (Entity: id, project FK, pipeline FK, environment, status, startedAt, completedAt)
+├── ScanRepository.java (Spring Data JPA with findByProjectId, findByProjectIdAndPipelineId)
+├── ScanService.java (3-step validation, CRUD operations)
+├── ScanController.java (REST endpoints for scan management)
+├── ScanNotFoundException.java (Exception for 404s)
+└── dto/
+    ├── CreateScanRequest.java (DTO for POST with pipelineId, environment)
+    └── ScanResponse.java (DTO for API responses)
+```
+
+**What Each File Does:**
+- `Environment.java`: Enum for DEV/STAGING/PROD environments
+- `ScanStatus.java`: Enum for CREATED/PROCESSING/COMPLETED/FAILED lifecycle
+- `Scan.java`: JPA entity with dual FKs to project and pipeline; unique on (project_id, pipeline_id)
+- `ScanRepository.java`: Custom queries for project and pipeline filtering
+- `ScanService.java`: Three-step validation (project exists → pipeline exists → pipeline belongs to project)
+- `ScanController.java`: Routes /api/projects/{projectId}/scans and /api/scans endpoints
+- `ScanNotFoundException.java`: 404 exception
+- `CreateScanRequest.java`: Validates pipelineId and environment required
+- `ScanResponse.java`: Returns id, projectId, pipelineId, environment, status, startedAt, completedAt
+
+**API Endpoints:**
+- `POST /api/projects/{projectId}/scans` → 201 Created
+- `GET /api/projects/{projectId}/scans` → 200 OK
+- `GET /api/scans/{scanId}` → 200 OK / 404
+
+**Critical Validation (Security Feature):**
+Three-step validation prevents cross-project data leakage:
+```
+1. Does project exist? → No = 404 NOT_FOUND
+2. Does pipeline exist? → No = 404 NOT_FOUND
+3. Does pipeline belong to project? → No = 400 INVALID_REQUEST
+   Example: Cannot attach Pipeline from Project B to Project A
+```
+
+**Database Relationship:**
+```
+project (1)
+    ├── (N) pipeline
+    │       └── (N) scan [unique: (project_id, pipeline_id)]
+    │
+    └── (N) scan [direct FK for fast project queries]
+
+Example:
+Project A (Payment API)
+  ├── Pipeline A1
+  │   ├── Scan (DEVELOPMENT)
+  │   └── Scan (STAGING)
+  └── Pipeline A2
+
+Project B (Job Portal)
+  └── Pipeline B1
+      └── Scan (PRODUCTION)
+```
+
+---
+
+## Modified Files Across All Phases
+
+| File | Changes |
 |------|---------|
-| `docs/PHASE_0.md` | Phase 0 detailed implementation, setup, and verification steps |
-| `docs/PHASE_1.md` | Phase 1 project management architecture and API details |
-| `docs/PHASE_2.md` | Phase 2 pipeline management, foreign keys, and isolation |
+| `GlobalExceptionHandler.java` | Phase 1: Added ProjectNotFoundException; Phase 2: Added DuplicateProjectException, DuplicatePipelineException, PipelineNotFoundException; Phase 3: Added ScanNotFoundException, IllegalArgumentException |
+
+---
+
+## Documentation Files (One per Phase)
+
+| File | Content |
+|------|---------|
+| `docs/PHASE_0.md` | Foundation setup, health check, database configuration |
+| `docs/PHASE_1.md` | Project management, unique constraints, API specs, Postman tests |
+| `docs/PHASE_2.md` | Pipeline management, multi-project isolation, API specs, Postman tests |
+| `docs/PHASE_3.md` | Scan management, security validation, API specs, 14 Postman tests |
+| `docs/DUPLICATE_PREVENTION.md` | Comprehensive duplicate prevention strategy and implementation |
 | `docs/SETUP.md` | Database setup, IDE configuration, Maven commands |
-| `.gitignore` | Git configuration for Maven, IDE, build artifacts |
-| `README.md` | 14-phase roadmap, system architecture, and complete project vision |
+
+---
+
+## Architecture Summary
+
+```
+Layer Hierarchy:
+  REST Controllers
+      ↓
+  Services (Business Logic + Validation)
+      ↓
+  Repositories (Data Access)
+      ↓
+  Entities (JPA Models)
+      ↓
+  PostgreSQL Database
+
+Isolation Model:
+  Project (root, globally unique by name)
+    └── Pipeline (child of project, unique by project+job+build)
+        └── Scan (child of pipeline, unique by project+pipeline)
+```
 
 ---
 
 ## Current Status
 
-**Implemented:** Phases 0, 1, 2 ✅
-**Next:** Phase 3 (Scan Management)
+**Implemented:** Phases 0, 1, 2, 3 ✅
+**Next:** Phase 4 (Report Management)
 
 **Build & Run:**
 ```bash
@@ -150,27 +270,8 @@ java -jar target/secureops-0.0.1-SNAPSHOT.jar
 **Database Tables Created:**
 - `project` (Phase 1)
 - `pipeline` (Phase 2)
+- `scan` (Phase 3)
 
 ---
 
-## Architecture Summary
-
-```
-Controller Layer
-  ├── HealthController → HealthService → (no DB in Phase 0)
-  ├── ProjectController → ProjectService → ProjectRepository → project table
-  └── PipelineController → PipelineService → PipelineRepository → pipeline table
-
-Exception Handling
-  └── GlobalExceptionHandler → ErrorResponse (JSON)
-
-Isolation Model
-  Project (root)
-    └── Pipeline (child, project_id FK)
-       └── Scan (child, pipeline_id FK) — Phase 3
-          └── Finding (child, scan_id FK) — Phase 5
-```
-
----
-
-End of Implementation Log
+**Implementation Log Complete ✅**

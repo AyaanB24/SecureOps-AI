@@ -4,6 +4,7 @@ import com.secureops.project.ProjectNotFoundException;
 import com.secureops.project.DuplicateProjectException;
 import com.secureops.pipeline.PipelineNotFoundException;
 import com.secureops.pipeline.DuplicatePipelineException;
+import com.secureops.scan.ScanNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,20 @@ public class GlobalExceptionHandler {
         log.warn("Duplicate pipeline: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("DUPLICATE", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(ScanNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleScanNotFound(ScanNotFoundException ex) {
+        log.warn("Scan not found: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Invalid argument: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("INVALID_REQUEST", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
