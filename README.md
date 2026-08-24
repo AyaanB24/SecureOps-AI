@@ -1,10 +1,8 @@
 # SecureOps AI
 
-### AI-Assisted Security Assessment Platform for Java/Spring Boot Applications
+### AI-Assisted Security Assessment Platform.
 
-> **Status:** Ongoing — Architecture & Backend Foundation
-
-SecureOps AI is a Java-based DevSecOps platform designed to identify security vulnerabilities in **Java/Spring Boot applications** and provide actionable security insights.
+SecureOps AI is a Java-based DevSecOps platform designed to identify security vulnerabilities in ** applications** and provide actionable security insights.
 
 The project focuses on building a production-oriented **Spring Boot backend** that can orchestrate security analysis, process vulnerability findings, and eventually use AI to explain and prioritize identified issues.
 
