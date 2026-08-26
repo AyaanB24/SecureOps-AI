@@ -138,69 +138,6 @@ sequenceDiagram
 
 ---
 
-## 4. Backend Architecture
-
-The core platform will be implemented using **Java and Spring Boot**.
-
-```text
-secureops/
-│
-├── src/main/java/com/secureops/
-│   │
-│   ├── controller/
-│   │   ├── ScanController.java
-│   │   ├── FindingController.java
-│   │   └── ReportController.java
-│   │
-│   ├── service/
-│   │   ├── ScanService.java
-│   │   ├── SecurityAnalysisService.java
-│   │   ├── FindingService.java
-│   │   └── ReportService.java
-│   │
-│   ├── repository/
-│   │   ├── ScanRepository.java
-│   │   └── FindingRepository.java
-│   │
-│   ├── model/
-│   │   ├── Scan.java
-│   │   ├── Finding.java
-│   │   └── Report.java
-│   │
-│   ├── dto/
-│   │   ├── ScanRequest.java
-│   │   ├── ScanResponse.java
-│   │   └── FindingResponse.java
-│   │
-│   ├── security/
-│   │   └── SecurityConfig.java
-│   │
-│   └── SecureOpsApplication.java
-│
-├── src/main/resources/
-│   └── application.yml
-│
-├── Dockerfile
-├── docker-compose.yml
-├── pom.xml
-└── README.md
-```
-
-The architecture follows a standard layered Spring Boot structure:
-
-```text
-Controller
-    ↓
-Service
-    ↓
-Repository
-    ↓
-Database
-```
-
-Security-analysis components will be separated from the API layer so that additional security tools can be integrated without tightly coupling them to the REST controllers.
-
----
 
 ## 5. Core Workflow
 
@@ -378,48 +315,6 @@ flowchart TD
 
 Docker Compose will initially be used for local development and service orchestration, mirroring this topology (`nginx`, `secureops-api`, `analysis-worker`, `db`, plus named volumes) before migrating to Kubernetes in Phase 7.
 
----
-
-## 9. Planned DevOps Workflow
-
-The project will gradually introduce CI/CD automation.
-
-```text
-Developer
-    │
-    ▼
-Git Push
-    │
-    ▼
-GitHub
-    │
-    ▼
-CI Pipeline
-    │
-    ├── Build
-    ├── Test
-    ├── Code Quality
-    ├── Security Scan
-    └── Docker Build
-            │
-            ▼
-       Docker Image
-            │
-            ▼
-       Deployment
-```
-
-Planned DevOps technologies include:
-
-* GitHub
-* Docker
-* Docker Compose
-* Jenkins / GitHub Actions
-* Kubernetes
-* Security scanning tools
-* Container registry
-
----
 
 ## 10. Technology Stack
 
