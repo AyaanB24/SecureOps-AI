@@ -40,3 +40,5 @@ application-local.properties
 # Node (if added later)
 node_modules/
 npm-debug.log
+
+Sample_Reports/

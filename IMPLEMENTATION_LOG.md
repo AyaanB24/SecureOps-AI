@@ -275,3 +275,81 @@ java -jar target/secureops-0.0.1-SNAPSHOT.jar
 ---
 
 **Implementation Log Complete ✅**
+
+
+## Phase 4: Security Report Ingestion ✅
+
+**What was implemented:**
+- Report entity with foreign key to Scan
+- ReportTool enum (TRIVY, SEMGREP, OWASP_DEPENDENCY_CHECK)
+- ReportStatus enum (RECEIVED, PROCESSING, PROCESSED, FAILED)
+- Multipart file upload endpoint for report ingestion
+- Filesystem-based report storage strategy
+- Report service with file validation and duplicate prevention
+
+**Files Created:**
+```
+secureops/src/main/java/com/secureops/report/
+├── ReportTool.java (Enum: TRIVY, SEMGREP, OWASP_DEPENDENCY_CHECK)
+├── ReportStatus.java (Enum: RECEIVED, PROCESSING, PROCESSED, FAILED)
+├── Report.java (Entity: id, scan FK, tool, fileName, filePath, status, receivedAt)
+├── ReportRepository.java (Custom queries: findByScanId, findByScanIdAndTool)
+├── ReportService.java (File upload, validation, storage)
+├── ReportController.java (POST /api/scans/{scanId}/reports - multipart)
+├── ReportNotFoundException.java (404 exception)
+└── dto/
+    └── ReportResponse.java (Response DTO)
+```
+
+**What Each File Does:**
+- `ReportTool.java`: Enum for supported security tools (TRIVY, SEMGREP, OWASP_DEPENDENCY_CHECK)
+- `ReportStatus.java`: Enum for report lifecycle (RECEIVED, PROCESSING, PROCESSED, FAILED)
+- `Report.java`: JPA entity; unique constraint (scan_id, tool); one report per tool per scan
+- `ReportRepository.java`: Queries reports by scan and by scan+tool combo
+- `ReportService.java`: Upload handler, file validation (JSON format), filesystem storage, duplicate check
+- `ReportController.java`: Multipart endpoint; consumes tool + file; returns ReportResponse (201)
+- `ReportNotFoundException.java`: Exception for 404 responses
+- `ReportResponse.java`: DTO with id, scanId, tool, fileName, status, receivedAt
+
+**API Endpoints:**
+- `POST /api/scans/{scanId}/reports` (multipart) → 201 Created
+- `GET /api/scans/{scanId}/reports` → 200 OK
+- `GET /api/reports/{reportId}` → 200 OK / 404
+
+**Filesystem Storage:**
+- Directory: `./reports/{scanId}/{tool}/{timestamp}_{originalFilename}`
+- Example: `./reports/a1b2c3d4-e5f6-7890-abcd-ef1234567890/TRIVY/1692801604523_trivy-report.json`
+- MVP strategy: Local storage (no AWS setup, easy testing)
+- Future migration: Storage layer abstraction allows S3 swap in Phase N
+
+**Report-to-Project Association:**
+```
+Project → Pipeline → Scan → Report
+                     ↓
+                   Report inherits project context
+                   through Scan.pipeline.project
+```
+
+**Unique Constraint:**
+- `UNIQUE(scan_id, tool)` ensures one report per tool per scan
+- Allows multiple reports from different tools per scan
+- Prevents duplicate ingestion from same tool
+
+**Database Schema:**
+- Foreign key: scan_id → scan.id (ON DELETE CASCADE)
+- Indexes: scan_id, tool, status
+- File path stored in database for retrieval
+
+**Phase 4 Features:**
+- Multipart file upload (form-data: tool + file)
+- File validation: Must be JSON (.json or application/json)
+- Empty file rejection
+- Duplicate report prevention (409 Conflict)
+- Scan existence validation (404 if not found)
+- Tool enum validation
+- Filesystem storage with hierarchical organization
+- Clear error messages for all failure scenarios
+
+---
+
+**End of Implementation Log**
