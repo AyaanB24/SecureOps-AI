@@ -6,6 +6,7 @@ import com.secureops.pipeline.PipelineNotFoundException;
 import com.secureops.pipeline.DuplicatePipelineException;
 import com.secureops.scan.ScanNotFoundException;
 import com.secureops.report.ReportNotFoundException;
+import com.secureops.finding.FindingNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +62,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ReportNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleReportNotFound(ReportNotFoundException ex) {
         log.warn("Report not found: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(FindingNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleFindingNotFound(FindingNotFoundException ex) {
+        log.warn("Finding not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
