@@ -422,12 +422,18 @@ Docker Compose will initially be used for local development and service orchestr
 * [x] Deterministic and reproducible calculation
 * [x] Comprehensive logging and error handling
 
-### Phase 8 — Semgrep Integration (Planned)
-* [ ] SemgrepParser for SAST findings (filePath, lineNumber)
-* [ ] Sarif JSON format parsing
-* [ ] Integrate custom rule support
+### Phase 8 — Configurable Security Policy System (✅ Complete)
+* [x] Policy entity with project + environment + thresholds
+* [x] PolicyEnvironment enum (DEVELOPMENT, STAGING, PRODUCTION)
+* [x] PolicyRepository with custom queries
+* [x] PolicyService with CRUD operations + validation
+* [x] PolicyController with REST endpoints (POST, GET, PUT)
+* [x] PolicyEngine for policy evaluation
+* [x] Project-level isolation (different projects, different policies)
+* [x] Database-driven policies (not hardcoded)
+* [x] Validation for negative thresholds and missing projects
 
-### Phase 9 — OWASP Dependency Check (Planned)
+### Phase 9 — SecurityDecision & Policy Enforcement (Planned)
 * [ ] OWASPDependencyCheckParser for dependency analysis
 * [ ] XML report parsing
 * [ ] Package vulnerability matching
@@ -457,7 +463,7 @@ Docker Compose will initially be used for local development and service orchestr
 
 ## 12. Current Status
 
-**Current phase: Phase 7 — Deterministic Risk Engine (Complete)**
+**Current phase: Phase 8 — Configurable Security Policy System (Complete)**
 
 Completed phases:
 - Phase 0: Spring Boot health checks and database connectivity
@@ -468,6 +474,7 @@ Completed phases:
 - Phase 5: Finding domain with deterministic fingerprinting
 - Phase 6: Real Trivy JSON parsing with edge case handling
 - Phase 7: Deterministic risk scoring by severity
+- Phase 8: Configurable environment-specific security policies
 
 **Current Functionality**:
 ```
@@ -477,19 +484,22 @@ Trivy JSON Parsing (Phase 6)
     ↓
 Normalized Findings (Phase 5)
     ↓
-Risk Scoring (Phase 7) ← NEW
+Risk Scoring (Phase 7)
     ↓
-Query/Analyze via REST APIs
+Policy Evaluation (Phase 8) ← NEW
+    ↓
+REST APIs
 ```
 
 **Data Flow**:
 1. User uploads Trivy JSON report → stored in filesystem
 2. System parses JSON → converts CVEs to normalized findings
 3. Risk engine calculates weighted score from finding severities
-4. Findings and risk scores queryable via REST APIs
-5. Each finding has fingerprint enabling future deduplication
+4. Policy engine evaluates scan against project's configurable policy
+5. Different projects can have different policies for same environment
+6. All findings, scores, and policies queryable via REST APIs
 
-All findings extracted from security tools are now persisted, scored by risk, and ready for querying, filtering, and analysis.
+All findings extracted from security tools are now persisted, scored by risk, evaluated against policies, and ready for policy-based decision making.
 
 ---
 
@@ -541,6 +551,15 @@ POST   /api/scans/{scanId}/findings?reportId={reportId}   - Create finding (test
 ```
 GET    /api/scans/{scanId}/risk                           - Calculate risk score for scan
 → {"scanId":"...", "riskScore":38, "criticalCount":1, "highCount":2, "mediumCount":2, "lowCount":0}
+```
+
+### Security Policies (Phase 8)
+```
+POST   /api/projects/{projectId}/policies                                   - Create policy
+GET    /api/projects/{projectId}/policies                                   - List policies for project
+GET    /api/projects/{projectId}/policies/{environment}                    - Get specific policy
+PUT    /api/projects/{projectId}/policies/{environment}                    - Update policy
+→ Each project can define different thresholds for different environments
 ```
 
 ---

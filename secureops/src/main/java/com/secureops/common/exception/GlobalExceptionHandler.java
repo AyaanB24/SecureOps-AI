@@ -8,6 +8,7 @@ import com.secureops.scan.ScanNotFoundException;
 import com.secureops.report.ReportNotFoundException;
 import com.secureops.report.parser.ReportParsingException;
 import com.secureops.finding.FindingNotFoundException;
+import com.secureops.policy.PolicyNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -70,6 +71,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FindingNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleFindingNotFound(FindingNotFoundException ex) {
         log.warn("Finding not found: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(PolicyNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePolicyNotFound(PolicyNotFoundException ex) {
+        log.warn("Policy not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
