@@ -414,12 +414,20 @@ Docker Compose will initially be used for local development and service orchestr
 * [x] Sample Trivy JSON with multiple targets and vulnerabilities
 * [x] Report status tracking (RECEIVED → PROCESSING → PROCESSED)
 
-### Phase 7 — Semgrep Integration (Planned)
+### Phase 7 — Deterministic Risk Engine (✅ Complete)
+* [x] RiskScore DTO with findings count by severity
+* [x] RiskEngine service with weighted scoring
+* [x] Severity weights (CRITICAL=10, HIGH=7, MEDIUM=4, LOW=1)
+* [x] RiskController with GET `/api/scans/{scanId}/risk` endpoint
+* [x] Deterministic and reproducible calculation
+* [x] Comprehensive logging and error handling
+
+### Phase 8 — Semgrep Integration (Planned)
 * [ ] SemgrepParser for SAST findings (filePath, lineNumber)
 * [ ] Sarif JSON format parsing
 * [ ] Integrate custom rule support
 
-### Phase 8 — OWASP Dependency Check (Planned)
+### Phase 9 — OWASP Dependency Check (Planned)
 * [ ] OWASPDependencyCheckParser for dependency analysis
 * [ ] XML report parsing
 * [ ] Package vulnerability matching
@@ -449,7 +457,7 @@ Docker Compose will initially be used for local development and service orchestr
 
 ## 12. Current Status
 
-**Current phase: Phase 6 — Trivy Report Parsing (Complete)**
+**Current phase: Phase 7 — Deterministic Risk Engine (Complete)**
 
 Completed phases:
 - Phase 0: Spring Boot health checks and database connectivity
@@ -459,6 +467,7 @@ Completed phases:
 - Phase 4: Report ingestion with filesystem storage
 - Phase 5: Finding domain with deterministic fingerprinting
 - Phase 6: Real Trivy JSON parsing with edge case handling
+- Phase 7: Deterministic risk scoring by severity
 
 **Current Functionality**:
 ```
@@ -468,16 +477,19 @@ Trivy JSON Parsing (Phase 6)
     ↓
 Normalized Findings (Phase 5)
     ↓
+Risk Scoring (Phase 7) ← NEW
+    ↓
 Query/Analyze via REST APIs
 ```
 
 **Data Flow**:
 1. User uploads Trivy JSON report → stored in filesystem
 2. System parses JSON → converts CVEs to normalized findings
-3. Findings queryable via `/api/scans/{scanId}/findings` and `/api/findings/{findingId}`
-4. Each finding has fingerprint enabling future deduplication
+3. Risk engine calculates weighted score from finding severities
+4. Findings and risk scores queryable via REST APIs
+5. Each finding has fingerprint enabling future deduplication
 
-All findings extracted from security tools are now persisted and ready for querying, filtering, and analysis.
+All findings extracted from security tools are now persisted, scored by risk, and ready for querying, filtering, and analysis.
 
 ---
 
@@ -523,6 +535,12 @@ POST   /api/scans/{scanId}/reports/{reportId}/process      - Parse report (Phase
 GET    /api/scans/{scanId}/findings                        - List findings for scan
 GET    /api/findings/{findingId}                           - Get finding by ID
 POST   /api/scans/{scanId}/findings?reportId={reportId}   - Create finding (test)
+```
+
+### Risk Scoring (Phase 7)
+```
+GET    /api/scans/{scanId}/risk                           - Calculate risk score for scan
+→ {"scanId":"...", "riskScore":38, "criticalCount":1, "highCount":2, "mediumCount":2, "lowCount":0}
 ```
 
 ---
