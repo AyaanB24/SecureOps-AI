@@ -1,0 +1,25 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "payment-api:latest",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "ubuntu",
+      "Name": "20.04"
+    }
+  },
+  "Results": [
+    {
+      "Target": "python:3.9-slim (ubuntu 20.04)",
+      "Class": "os-pkgs",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2023-12345",
+          "PkgName": "libssl1.1",
+          "Severity": "HIGH",
+          "Title": "OpenSSL vulnerability"
+        }
+      ]
+    }
+  ]
+}

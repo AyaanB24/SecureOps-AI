@@ -1,4 +1,4 @@
-package com.secureops.report;
+    package com.secureops.report;
 
 import com.secureops.report.dto.ReportResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +14,8 @@ import java.util.UUID;
 /**
  * FILE: src/main/java/com/secureops/report/ReportController.java
  * PURPOSE: REST controller for report management endpoints.
- * WHY IT EXISTS: Exposes report upload and retrieval via HTTP; handles multipart file uploads.
- * DEPENDENCIES: Uses ReportService for business logic; returns ReportResponse DTOs.
+ * WHY IT EXISTS: Exposes report upload, retrieval, and processing via HTTP.
+ * DEPENDENCIES: Uses ReportService and ReportProcessingService for business logic.
  */
 @RestController
 @RequestMapping("/api")
@@ -24,6 +24,7 @@ import java.util.UUID;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportProcessingService reportProcessingService;
 
     /**
      * Upload a security report for a specific scan.
@@ -42,14 +43,18 @@ public class ReportController {
         
         log.info("POST /api/scans/{}/reports - Uploading report with tool: {}", scanId, toolString);
         
+        ReportTool tool;
         try {
             // Convert string to enum
-            ReportTool tool = ReportTool.valueOf(toolString.toUpperCase());
-            ReportResponse response = reportService.uploadReport(scanId, tool, file);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            tool = ReportTool.valueOf(toolString.toUpperCase());
         } catch (IllegalArgumentException e) {
             log.error("Invalid tool: {}", toolString);
             throw new IllegalArgumentException("Invalid tool: " + toolString + ". Supported tools: TRIVY, SEMGREP, OWASP_DEPENDENCY_CHECK");
+        }
+        
+        try {
+            ReportResponse response = reportService.uploadReport(scanId, tool, file);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IOException e) {
             log.error("File storage error: {}", e.getMessage());
             throw new RuntimeException("Failed to store report file: " + e.getMessage());
@@ -83,6 +88,29 @@ public class ReportController {
         log.info("GET /api/reports/{} - Fetching report", reportId);
         ReportResponse response = reportService.getReportById(reportId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Process a security report and extract findings.
+     * POST /api/scans/{scanId}/reports/{reportId}/process
+     * 
+     * Triggers parsing of the uploaded report file and creates normalized Finding records.
+     * Currently supports Trivy reports (CVE scanning).
+     *
+     * @param scanId UUID of the scan
+     * @param reportId UUID of the report to process
+     * @return ResponseEntity with ReportProcessingResult and HTTP 200 OK
+     * @throws ReportNotFoundException if report does not exist
+     * @throws RuntimeException if report processing fails
+     */
+    @PostMapping("/scans/{scanId}/reports/{reportId}/process")
+    public ResponseEntity<ReportProcessingResult> processReport(
+            @PathVariable UUID scanId,
+            @PathVariable UUID reportId) {
+        log.info("POST /api/scans/{}/reports/{}/process - Processing report", scanId, reportId);
+        
+        ReportProcessingResult result = reportProcessingService.processReport(reportId);
+        return ResponseEntity.ok(result);
     }
 
 }

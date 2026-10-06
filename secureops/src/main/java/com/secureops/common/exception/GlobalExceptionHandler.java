@@ -6,6 +6,7 @@ import com.secureops.pipeline.PipelineNotFoundException;
 import com.secureops.pipeline.DuplicatePipelineException;
 import com.secureops.scan.ScanNotFoundException;
 import com.secureops.report.ReportNotFoundException;
+import com.secureops.report.parser.ReportParsingException;
 import com.secureops.finding.FindingNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -71,6 +72,13 @@ public class GlobalExceptionHandler {
         log.warn("Finding not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(ReportParsingException.class)
+    public ResponseEntity<ErrorResponse> handleReportParsingException(ReportParsingException ex) {
+        log.error("Report parsing failed: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("PARSING_ERROR", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

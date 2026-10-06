@@ -320,23 +320,25 @@ Docker Compose will initially be used for local development and service orchestr
 
 ### Backend
 
-* Java
-* Spring Boot
+* Java 21
+* Spring Boot 4.1.1
 * Spring Security
 * Spring Data JPA
 * REST APIs
 * Maven
+* Jackson (JSON parsing)
+* Lombok
 
 ### Database
 
-* MySQL / PostgreSQL
+* PostgreSQL 18+
 
 ### Security
 
-* SAST
-* Dependency vulnerability scanning
-* Container scanning
+* Trivy (CVE/Container analysis) - Phase 6 integrated
+* Future: Semgrep (SAST), OWASP Dependency Check
 * Secret detection
+* Container scanning
 
 ### DevOps
 
@@ -344,90 +346,188 @@ Docker Compose will initially be used for local development and service orchestr
 * GitHub
 * Docker
 * Docker Compose
-* Jenkins
-* Kubernetes
+* Maven
+* Tomcat (embedded)
 
 ### AI
 
-* LLM-based vulnerability explanation
-* Risk prioritization
-* Remediation assistance
+* LLM-based vulnerability explanation (planned)
+* Risk prioritization (planned)
+* Remediation assistance (planned)
 
 ---
 
 ## 11. Development Roadmap
 
-### Phase 1 — Foundation
+### Phase 0 — Foundation (✅ Complete)
+* [x] Spring Boot 4.1.1 project with Java 21
+* [x] PostgreSQL connectivity with HikariCP
+* [x] Health check endpoint (`GET /api/health`)
+* [x] Database auto-initialization (ddl-auto=update)
 
-* [x] Define project scope
-* [x] Create README
-* [x] Define initial architecture
-* [x] Define technology stack
-* [ ] Initialize Spring Boot project
-* [ ] Configure Maven
-* [ ] Create package structure
+### Phase 1 — Project Management (✅ Complete)
+* [x] Project entity with UUID primary key
+* [x] ProjectRepository (Spring Data JPA)
+* [x] ProjectService (CRUD operations)
+* [x] ProjectController (3 endpoints: POST, GET all, GET by ID)
+* [x] Duplicate project prevention (unique constraint on name)
+* [x] Global exception handling
 
-### Phase 2 — Backend Core
+### Phase 2 — Pipeline Management (✅ Complete)
+* [x] Pipeline entity with foreign key to Project
+* [x] PipelineProvider enum (JENKINS, GITHUB_ACTIONS, etc.)
+* [x] PipelineService with project validation
+* [x] PipelineController (3 endpoints)
+* [x] Duplicate pipeline prevention (composite unique constraint)
 
-* [ ] Design database schema
-* [ ] Implement Scan entity
-* [ ] Implement Finding entity
-* [ ] Implement REST APIs
-* [ ] Add validation
-* [ ] Add global exception handling
-* [ ] Add API documentation
+### Phase 3 — Scan Management (✅ Complete)
+* [x] Scan entity with dual FKs (Project, Pipeline)
+* [x] Environment enum (DEVELOPMENT, STAGING, PRODUCTION)
+* [x] ScanStatus enum (CREATED, PROCESSING, COMPLETED, FAILED)
+* [x] Three-step cross-project security validation
+* [x] Unique constraint allowing multiple scans per pipeline in different environments
 
-### Phase 3 — Security Engine
+### Phase 4 — Report Ingestion (✅ Complete)
+* [x] Report entity with FK to Scan
+* [x] ReportTool enum (TRIVY, SEMGREP, OWASP_DEPENDENCY_CHECK)
+* [x] ReportStatus enum (RECEIVED, PROCESSING, PROCESSED, FAILED)
+* [x] Multipart file upload to `/api/scans/{scanId}/reports?tool=TRIVY`
+* [x] Filesystem storage strategy (./reports/{scanId}/{tool}/{timestamp}_{filename})
+* [x] Unique constraint (one report per tool per scan)
 
-* [ ] Integrate source-code analysis
-* [ ] Integrate dependency analysis
-* [ ] Normalize security findings
-* [ ] Implement severity classification
-* [ ] Store scan results
+### Phase 5 — Finding Domain (✅ Complete)
+* [x] Finding entity with dual FKs (Scan, Report)
+* [x] Severity enum (CRITICAL, HIGH, MEDIUM, LOW)
+* [x] FindingStatus enum (OPEN, RESOLVED)
+* [x] FingerprintService with deterministic SHA-256 hashing
+* [x] FindingService (CRUD + cross-project validation)
+* [x] FindingController (GET/POST endpoints)
+* [x] APIs: GET findings by scan, GET specific finding, POST create finding
 
-### Phase 4 — Docker
+### Phase 6 — Trivy Report Parsing (✅ Complete)
+* [x] SecurityReportParser interface for pluggable parsers
+* [x] TrivyParser implementation with field mapping
+* [x] Jackson POJOs (TrivyReport, TrivyResult, TrivyVulnerability)
+* [x] ReportProcessingService orchestrating parsing and persistence
+* [x] API: `POST /api/scans/{scanId}/reports/{reportId}/process`
+* [x] Edge case handling (missing fields, unknown severity, malformed JSON)
+* [x] Sample Trivy JSON with multiple targets and vulnerabilities
+* [x] Report status tracking (RECEIVED → PROCESSING → PROCESSED)
 
-* [ ] Create SecureOps Dockerfile
-* [ ] Create Docker Compose setup
-* [ ] Containerize analysis components
-* [ ] Test isolated scan execution
+### Phase 7 — Semgrep Integration (Planned)
+* [ ] SemgrepParser for SAST findings (filePath, lineNumber)
+* [ ] Sarif JSON format parsing
+* [ ] Integrate custom rule support
 
-### Phase 5 — AI Layer
+### Phase 8 — OWASP Dependency Check (Planned)
+* [ ] OWASPDependencyCheckParser for dependency analysis
+* [ ] XML report parsing
+* [ ] Package vulnerability matching
 
-* [ ] Integrate LLM
-* [ ] Generate vulnerability explanations
-* [ ] Generate remediation suggestions
-* [ ] Implement risk prioritization
+### Phase 9 — Finding Deduplication (Planned)
+* [ ] Cross-scan fingerprint matching
+* [ ] Vulnerability lifecycle tracking (NEW, PERSISTENT, RESOLVED, REGRESSED)
+* [ ] Finding correlation across multiple scans
 
-### Phase 6 — CI/CD & DevSecOps
+### Phase 10 — Risk & Policy (Planned)
+* [ ] Risk scoring (CVSS integration)
+* [ ] SLA-based remediation policies
+* [ ] Auto-resolution based on policy
 
-* [ ] Create CI pipeline
-* [ ] Automate security scans
-* [ ] Build Docker images
-* [ ] Push images to registry
-* [ ] Deploy SecureOps
+### Phase 11 — AI Layer (Planned)
+* [ ] LLM integration for vulnerability explanation
+* [ ] Risk prioritization
+* [ ] Remediation suggestions
 
-### Phase 7 — Kubernetes
-
-* [ ] Create Kubernetes manifests
-* [ ] Configure Services
-* [ ] Configure Secrets
-* [ ] Configure persistent storage
-* [ ] Deploy SecureOps on Kubernetes
+### Phase 12 — Kubernetes Deployment (Planned)
+* [ ] Kubernetes manifests
+* [ ] Service and ingress configuration
+* [ ] Persistent storage configuration
+* [ ] Helm charts
 
 ---
 
 ## 12. Current Status
 
-**Current phase: Phase 1 — Foundation**
+**Current phase: Phase 6 — Trivy Report Parsing (Complete)**
 
-The project has currently been scoped around analyzing **Java/Spring Boot applications**, with **Java/Spring Boot as the core backend technology** and Docker as the initial deployment target.
+Completed phases:
+- Phase 0: Spring Boot health checks and database connectivity
+- Phase 1: Project management with multi-tenancy
+- Phase 2: Pipeline management per project
+- Phase 3: Scan management with cross-project isolation
+- Phase 4: Report ingestion with filesystem storage
+- Phase 5: Finding domain with deterministic fingerprinting
+- Phase 6: Real Trivy JSON parsing with edge case handling
 
-The next implementation milestone is to build the Spring Boot backend and establish the scan → analysis → finding workflow before adding AI and advanced DevSecOps automation.
+**Current Functionality**:
+```
+Report Upload (Phase 4)
+    ↓
+Trivy JSON Parsing (Phase 6)
+    ↓
+Normalized Findings (Phase 5)
+    ↓
+Query/Analyze via REST APIs
+```
+
+**Data Flow**:
+1. User uploads Trivy JSON report → stored in filesystem
+2. System parses JSON → converts CVEs to normalized findings
+3. Findings queryable via `/api/scans/{scanId}/findings` and `/api/findings/{findingId}`
+4. Each finding has fingerprint enabling future deduplication
+
+All findings extracted from security tools are now persisted and ready for querying, filtering, and analysis.
 
 ---
 
-## 13. Long-Term Vision
+## 13. API Endpoints Overview
+
+### Health Check
+```
+GET /api/health
+→ {"status":"UP","service":"SecureOps","database":"UP"}
+```
+
+### Projects (Phase 1)
+```
+POST   /api/projects                    - Create project
+GET    /api/projects                    - List all projects
+GET    /api/projects/{projectId}        - Get project by ID
+```
+
+### Pipelines (Phase 2)
+```
+POST   /api/pipelines                   - Create pipeline
+GET    /api/pipelines                   - List all pipelines
+GET    /api/pipelines/{pipelineId}      - Get pipeline by ID
+```
+
+### Scans (Phase 3)
+```
+POST   /api/projects/{projectId}/scans  - Create scan
+GET    /api/projects/{projectId}/scans  - List scans for project
+GET    /api/scans/{scanId}              - Get scan by ID
+```
+
+### Reports (Phase 4)
+```
+POST   /api/scans/{scanId}/reports?tool=TRIVY              - Upload report
+GET    /api/scans/{scanId}/reports                         - List reports for scan
+GET    /api/reports/{reportId}                             - Get report by ID
+POST   /api/scans/{scanId}/reports/{reportId}/process      - Parse report (Phase 6)
+```
+
+### Findings (Phase 5 & 6)
+```
+GET    /api/scans/{scanId}/findings                        - List findings for scan
+GET    /api/findings/{findingId}                           - Get finding by ID
+POST   /api/scans/{scanId}/findings?reportId={reportId}   - Create finding (test)
+```
+
+---
+
+## 14. Long-Term Vision
 
 SecureOps AI is intended to evolve from a security-analysis backend into a complete DevSecOps platform where a developer can submit an application and receive a centralized security assessment containing:
 
