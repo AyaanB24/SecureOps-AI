@@ -9,6 +9,7 @@ import com.secureops.report.ReportNotFoundException;
 import com.secureops.report.parser.ReportParsingException;
 import com.secureops.finding.FindingNotFoundException;
 import com.secureops.policy.PolicyNotFoundException;
+import com.secureops.decision.SecurityDecisionNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -78,6 +79,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PolicyNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlePolicyNotFound(PolicyNotFoundException ex) {
         log.warn("Policy not found: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(SecurityDecisionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSecurityDecisionNotFound(SecurityDecisionNotFoundException ex) {
+        log.warn("Security decision not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }

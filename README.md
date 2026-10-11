@@ -433,12 +433,14 @@ Docker Compose will initially be used for local development and service orchestr
 * [x] Database-driven policies (not hardcoded)
 * [x] Validation for negative thresholds and missing projects
 
-### Phase 9 — SecurityDecision & Policy Enforcement (Planned)
-* [ ] OWASPDependencyCheckParser for dependency analysis
-* [ ] XML report parsing
-* [ ] Package vulnerability matching
+### Phase 9 — SecurityDecision & Policy Enforcement (✅ Complete)
+* [x] SecurityDecision entity with PASS/BLOCK decision
+* [x] Combines findings + risk + policy to generate verdict
+* [x] Deterministic decision logic (no AI, reproducible)
+* [x] Detailed decision reasoning (why PASS or BLOCK)
+* [x] One decision per scan (unique constraint)
 
-### Phase 9 — Finding Deduplication (Planned)
+### Phase 10 — Finding Deduplication (Planned)
 * [ ] Cross-scan fingerprint matching
 * [ ] Vulnerability lifecycle tracking (NEW, PERSISTENT, RESOLVED, REGRESSED)
 * [ ] Finding correlation across multiple scans
@@ -463,7 +465,7 @@ Docker Compose will initially be used for local development and service orchestr
 
 ## 12. Current Status
 
-**Current phase: Phase 8 — Configurable Security Policy System (Complete)**
+**Current phase: Phase 9 — SecurityDecision & Policy Enforcement (Complete)**
 
 Completed phases:
 - Phase 0: Spring Boot health checks and database connectivity
@@ -475,6 +477,7 @@ Completed phases:
 - Phase 6: Real Trivy JSON parsing with edge case handling
 - Phase 7: Deterministic risk scoring by severity
 - Phase 8: Configurable environment-specific security policies
+- Phase 9: Deterministic security decisions (PASS/BLOCK verdicts)
 
 **Current Functionality**:
 ```
@@ -486,20 +489,23 @@ Normalized Findings (Phase 5)
     ↓
 Risk Scoring (Phase 7)
     ↓
-Policy Evaluation (Phase 8) ← NEW
+Policy Evaluation (Phase 8)
     ↓
-REST APIs
+Security Decision (Phase 9) ← NEW
+    ↓
+REST API
 ```
 
-**Data Flow**:
-1. User uploads Trivy JSON report → stored in filesystem
-2. System parses JSON → converts CVEs to normalized findings
-3. Risk engine calculates weighted score from finding severities
-4. Policy engine evaluates scan against project's configurable policy
-5. Different projects can have different policies for same environment
-6. All findings, scores, and policies queryable via REST APIs
+**Decision Flow (Phase 9)**:
+1. Load scan (project + environment)
+2. Load project policy for that environment
+3. Count findings by severity
+4. Calculate risk score
+5. Evaluate policy thresholds
+6. Generate PASS or BLOCK with reason
+7. Store decision and return
 
-All findings extracted from security tools are now persisted, scored by risk, evaluated against policies, and ready for policy-based decision making.
+All findings extracted from security tools are now scored, evaluated against policies, and produce deterministic PASS/BLOCK security decisions.
 
 ---
 
@@ -560,6 +566,13 @@ GET    /api/projects/{projectId}/policies                                   - Li
 GET    /api/projects/{projectId}/policies/{environment}                    - Get specific policy
 PUT    /api/projects/{projectId}/policies/{environment}                    - Update policy
 → Each project can define different thresholds for different environments
+```
+
+### Security Decisions (Phase 9)
+```
+GET    /api/scans/{scanId}/decision                                        - Generate PASS/BLOCK decision
+→ {"scanId":"...", "decision":"PASS"/"BLOCK", "riskScore":38, "reason":"..."}
+→ Combines findings + risk + policy for deterministic verdict
 ```
 
 ---
