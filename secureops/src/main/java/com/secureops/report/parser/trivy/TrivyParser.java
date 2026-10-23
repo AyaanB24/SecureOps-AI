@@ -171,12 +171,18 @@ public class TrivyParser implements SecurityReportParser {
         // Normalize severity
         Severity severity = normalizeSeverity(vuln.getSeverity());
 
+        // Extract CVSS score (handles both simple numeric and complex object formats)
+        Double cvssScore = vuln.getCVSSScore();
+        if (cvssScore != null) {
+            log.debug("Extracted CVSS score {} for vulnerability {}", cvssScore, ruleId);
+        }
+
         // Generate fingerprint
         String fingerprint = fingerprintService.generateFingerprint(
             "TRIVY", ruleId, null, null, packageName
         );
 
-        // Create Finding entity
+        // Create Finding entity with CVSS score
         Finding finding = new Finding(
             scan,
             report,
@@ -189,7 +195,8 @@ public class TrivyParser implements SecurityReportParser {
             null,  // lineNumber
             packageName,
             packageVersion,
-            fingerprint
+            fingerprint,
+            cvssScore
         );
 
         return finding;

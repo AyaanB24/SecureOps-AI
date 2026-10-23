@@ -440,6 +440,16 @@ Docker Compose will initially be used for local development and service orchestr
 * [x] Detailed decision reasoning (why PASS or BLOCK)
 * [x] One decision per scan (unique constraint)
 
+### Phase 11 — Real Jenkins Integration (✅ Complete)
+* [x] Find project by name endpoint (`GET /api/projects?name={name}`)
+* [x] Verified all Phase 10 APIs for Jenkins compatibility
+* [x] Duplicate pipeline prevention with 409 Conflict response
+* [x] Error handling for all scenarios (404, 409, 400, 500)
+* [x] Complete Jenkins workflow documentation
+* [x] Full Jenkinsfile example with error handling
+* [x] Jenkins integration testing guide
+* [x] Comprehensive troubleshooting documentation
+
 ### Phase 10 — Finding Deduplication (Planned)
 * [ ] Cross-scan fingerprint matching
 * [ ] Vulnerability lifecycle tracking (NEW, PERSISTENT, RESOLVED, REGRESSED)
@@ -465,7 +475,7 @@ Docker Compose will initially be used for local development and service orchestr
 
 ## 12. Current Status
 
-**Current phase: Phase 9 — SecurityDecision & Policy Enforcement (Complete)**
+**Current phase: Phase 11 — Real Jenkins Integration (Complete)**
 
 Completed phases:
 - Phase 0: Spring Boot health checks and database connectivity
@@ -478,6 +488,7 @@ Completed phases:
 - Phase 7: Deterministic risk scoring by severity
 - Phase 8: Configurable environment-specific security policies
 - Phase 9: Deterministic security decisions (PASS/BLOCK verdicts)
+- Phase 11: Real Jenkins integration (NEW)
 
 **Current Functionality**:
 ```
@@ -491,21 +502,25 @@ Risk Scoring (Phase 7)
     ↓
 Policy Evaluation (Phase 8)
     ↓
-Security Decision (Phase 9) ← NEW
+Security Decision (Phase 9)
     ↓
-REST API
+Jenkins Integration (Phase 11) ← NEW
+    ↓
+REST APIs
 ```
 
-**Decision Flow (Phase 9)**:
-1. Load scan (project + environment)
-2. Load project policy for that environment
-3. Count findings by severity
-4. Calculate risk score
-5. Evaluate policy thresholds
-6. Generate PASS or BLOCK with reason
-7. Store decision and return
+**Phase 11 — Jenkins Integration**:
+- Find or create projects by name (prevents duplicates)
+- Create unique pipelines per Jenkins job + build number
+- Create unique scans per pipeline + environment
+- Upload Trivy JSON reports (multipart form-data)
+- Process reports and extract findings
+- Generate deterministic PASS/BLOCK decisions
+- Safe error handling (no false PASS)
+- Complete Jenkins workflow documentation
+- Full Jenkinsfile example
 
-All findings extracted from security tools are now scored, evaluated against policies, and produce deterministic PASS/BLOCK security decisions.
+All endpoints required for real Jenkins integration are implemented, verified, and documented. Ready for end-to-end testing with Jenkins.
 
 ---
 
@@ -517,11 +532,12 @@ GET /api/health
 → {"status":"UP","service":"SecureOps","database":"UP"}
 ```
 
-### Projects (Phase 1)
+### Projects (Phase 1 + Phase 11)
 ```
 POST   /api/projects                    - Create project
 GET    /api/projects                    - List all projects
 GET    /api/projects/{projectId}        - Get project by ID
+GET    /api/projects?name={name}        - Find project by name (Phase 11 NEW)
 ```
 
 ### Pipelines (Phase 2)

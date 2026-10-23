@@ -84,6 +84,9 @@ public class Finding {
     @Column(name = "package_version", length = 255)
     private String packageVersion;
 
+    @Column(name = "cvss_score")
+    private Double cvssScore;
+
     @Column(name = "fingerprint", nullable = false, length = 64)
     private String fingerprint;
 
@@ -112,6 +115,29 @@ public class Finding {
         this.packageName = packageName;
         this.packageVersion = packageVersion;
         this.fingerprint = fingerprint;
+        this.status = FindingStatus.OPEN;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    /**
+     * Constructor for creating findings with CVSS score.
+     */
+    public Finding(Scan scan, Report report, String tool, String ruleId, String title,
+                   String description, Severity severity, String filePath, Integer lineNumber,
+                   String packageName, String packageVersion, String fingerprint, Double cvssScore) {
+        this.scan = scan;
+        this.report = report;
+        this.tool = tool;
+        this.ruleId = ruleId;
+        this.title = title;
+        this.description = description;
+        this.severity = severity;
+        this.filePath = filePath;
+        this.lineNumber = lineNumber;
+        this.packageName = packageName;
+        this.packageVersion = packageVersion;
+        this.fingerprint = fingerprint;
+        this.cvssScore = cvssScore;
         this.status = FindingStatus.OPEN;
         this.createdAt = LocalDateTime.now();
     }

@@ -65,4 +65,18 @@ public class ProjectService {
         return ProjectResponse.fromEntity(project);
     }
 
+    /**
+     * Find a project by name.
+     * Used by Jenkins to identify existing projects before creating new ones.
+     *
+     * @param name Name of the project to find
+     * @return ProjectResponse containing project data
+     * @throws ProjectNotFoundException if project does not exist
+     */
+    public ProjectResponse getProjectByName(String name) {
+        Project project = projectRepository.findByName(name)
+            .orElseThrow(() -> new ProjectNotFoundException("Project not found with name: " + name));
+        return ProjectResponse.fromEntity(project);
+    }
+
 }

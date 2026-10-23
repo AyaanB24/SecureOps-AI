@@ -40,16 +40,27 @@ public class ProjectController {
     }
 
     /**
-     * Get all projects.
-     * GET /api/projects
+     * Get all projects or find by name.
+     * GET /api/projects - returns all projects
+     * GET /api/projects?name={projectName} - returns specific project by name
      *
-     * @return ResponseEntity with List of ProjectResponse and HTTP 200 OK
+     * @param name Optional name parameter. If provided, searches for project by name.
+     * @return ResponseEntity with ProjectResponse (single) or List of ProjectResponse (all)
+     * @throws ProjectNotFoundException if project not found
      */
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> getAllProjects() {
-        log.info("Fetching all projects");
-        List<ProjectResponse> projects = projectService.getAllProjects();
-        return ResponseEntity.ok(projects);
+    public ResponseEntity<?> getProjects(@RequestParam(value = "name", required = false) String name) {
+        if (name != null && !name.isEmpty()) {
+            // Search by name (for Jenkins integration)
+            log.info("Fetching project by name: {}", name);
+            ProjectResponse response = projectService.getProjectByName(name);
+            return ResponseEntity.ok(response);
+        } else {
+            // Return all projects
+            log.info("Fetching all projects");
+            List<ProjectResponse> projects = projectService.getAllProjects();
+            return ResponseEntity.ok(projects);
+        }
     }
 
     /**
