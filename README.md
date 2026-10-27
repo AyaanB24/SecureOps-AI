@@ -614,3 +614,313 @@ Secure Deployment
 ```
 
 The long-term objective is to make security analysis an integrated part of the application development and deployment lifecycle rather than a separate manual activity.
+
+
+---
+
+## Development Status — Frontend Implementation
+
+### Phase Completion Summary
+
+| Phase | Status | Component | Build |
+|-------|--------|-----------|-------|
+| Phase 0 | ✅ COMPLETE | Technical Specification & Tech Stack | — |
+| Phase 1 | ✅ COMPLETE | Frontend Foundation (React, Vite, TypeScript, Routing) | 0 errors, 15s |
+| Phase 2-3 | ✅ COMPLETE | Dashboard, Projects, Pipelines | 0 errors, 9.13s |
+| Phase 4 | ✅ COMPLETE | Scans, Reports, Findings | 0 errors, 14.03s |
+| Phase 5 | ✅ COMPLETE | Security Decisions, Policies | 0 errors, 12.73s |
+| **Phase 6** | **✅ COMPLETE** | **AI Analysis, Settings, UX, Toast Notifications** | **0 errors, 14.20s** |
+
+### Latest: Phase 6 - AI Analysis, Settings, UX Improvements & Toast System
+
+**AI Analysis Page:**
+- Clearly labeled "Coming Soon" - no fabricated AI recommendations
+- Shows current platform capabilities (scanning, policy gates, findings aggregation)
+- Lists planned AI features (root-cause analysis, remediation suggestions, risk prioritization)
+- Explains how AI will work without making promises about timeline
+- Data privacy & safety information
+- Getting started guide for current features
+
+**Settings Page:**
+- API connection status checker (safe GET to /projects endpoint)
+- Real-time latency measurement and display
+- Read-only API URL display with copy-to-clipboard
+- Application information (version, tech stack, backend port)
+- Data & privacy explanation
+- Keyboard shortcuts reference
+- Troubleshooting information for connection issues
+
+**Toast Notification System:**
+- Context-based toast management (`ToastProvider` wrapper)
+- Four toast types: success, error, warning, info
+- Auto-dismiss with configurable durations
+- Slide-in animation (respects `prefers-reduced-motion`)
+- Manual close button on each toast
+- Positioned fixed bottom-right, z-index 50
+- Integrated into MainLayout for global availability
+- `useToast()` hook for easy access from any page
+
+**Error Boundary:**
+- Catches unexpected React errors
+- User-friendly error UI with gradient background
+- Error details visible in development mode
+- "Go to Home" button to recover from error state
+
+**Not Found Page:**
+- Enhanced with gradient background
+- Helpful messaging and navigation options
+- Consistent with app's design language
+
+**UX Improvements:**
+- Tailwind animation `animate-slideIn` for toast notifications
+- Mobile menu backdrop overlay
+- Responsive layout improvements
+- Focus indicators on all interactive elements
+- ARIA labels for accessibility
+
+**Build:** Production build 369.96 kB (109.90 kB gzip), 14.20s, TypeScript 0 errors
+
+### Frontend Technology Stack
+
+- **React 18** with TypeScript
+- **Vite** build system
+- **TanStack Query v5** for data fetching and caching
+- **React Router v6** for client-side routing
+- **Tailwind CSS** with custom animations
+- **Recharts** for visualizations
+- **Lucide React** for icons
+- **Vitest + React Testing Library** for unit testing
+
+### API Integration
+
+All frontend pages connected to live Spring Boot backend (port 8081):
+- Projects, Pipelines, Scans, Findings APIs
+- Reports upload and processing
+- Security Decisions (PASS/BLOCK)
+- Policy management (CRUD)
+- CORS enabled for frontend dev server (port 5173)
+
+### Running the Application
+
+**Backend (Spring Boot):**
+```bash
+cd secureops
+./mvnw spring-boot:run  # Runs on :8081
+```
+
+**Frontend (React + Vite):**
+```bash
+cd frontend-app
+npm install
+npm run dev  # Dev server on :5173
+npm run build  # Production build
+npm run test   # Run tests
+```
+
+### Project Isolation
+
+All data is scoped to project level:
+- Each project has own pipelines, scans, reports, findings
+- Each project has own policies per environment
+- No cross-project data leakage
+- All endpoints validate project ownership
+
+### Key Implementation Principles
+
+✅ **Real backend integration** - No mock data or hardcoding
+✅ **Deterministic decisions** - Backend verdict authority
+✅ **Safe mutations** - Confirmation dialogs for policy changes
+✅ **Project isolation** - Multi-project support
+✅ **Error handling** - User-friendly error pages and toasts
+✅ **Responsive design** - Mobile, tablet, desktop support
+✅ **Type safety** - TypeScript throughout
+✅ **Accessibility** - ARIA labels, focus indicators, reduced motion support
+✅ **No fabricated AI** - Settings and AI Analysis are honest about current/future capabilities
+
+### Documentation
+
+- `PHASE_6_COMPLETE.md` - Phase 6 detailed implementation (Toast system, Settings, AI Analysis)
+- `PHASE_5_COMPLETE.md` - Phase 5 Decisions & Policies
+- `PHASE_4_COMPLETE.md` - Phase 4 Scans, Reports & Findings
+- `DELETE_PROJECT_FEATURE_COMPLETE.md` - Delete projects feature
+- `CASCADE_DELETE_FIX_COMPLETE.md` - Cascade delete architecture
+
+### Testing
+
+All new components have unit tests:
+- **Toast.test.tsx** - Toast component rendering, auto-dismiss, animations
+- **Settings.test.tsx** - API connection status, URL display, error handling
+- **AIAnalysis.test.tsx** - Coming-soon state, feature list, privacy info
+- **ErrorBoundary.test.tsx** - Error catching and recovery
+- Regression tests for existing pages maintained
+
+Run tests with: `npm run test`
+
+### Next Phases (Planned)
+
+- Phase 7: Responsive layout & mobile improvements
+- Phase 8: Accessibility enhancements (full WCAG compliance)
+- Phase 9: Page transitions & animations
+- Phase 10: Search & filtering enhancements
+- Phase 11: Export & reporting features
+- Phase 12: Dark mode support
+
+---
+
+## 15. USER WORKFLOW — WHERE TO DO WHAT
+
+### Quick Start: Complete the Workflow in 5 Minutes
+
+See **`docs/COMPLETE_WORKFLOW_GUIDE.md`** for step-by-step instructions.
+
+**TL;DR:**
+1. **Register Project** → Go to `Projects` page → Click "Add Project"
+2. **View Policies** → Go to `Policies` page → See 3 default policies auto-created
+3. **Create Pipeline** → Go to `Pipelines` page → Click "Create Pipeline"
+4. **Create Scan** → Go to `Pipelines` page → Click "Create Scan" (in Scans section)
+5. **Upload Report** → Go to `Scans` page → Click "Upload Report"
+6. **View Findings** → Go to `Findings` page → See all vulnerabilities
+7. **View Decision** → Go to `Decisions` page → See PASS or BLOCK
+
+### UI Navigation Map
+
+```
+Dashboard
+  ├─ View all projects
+  ├─ See recent activity
+  └─ Monitor security status
+
+Projects
+  ├─ Create new project
+  ├─ List all projects
+  └─ Delete projects
+  → Auto-creates 3 policies per project
+
+Pipelines
+  ├─ Create new pipeline
+  ├─ List pipelines
+  └─ Scans section:
+      ├─ Create new scan
+      ├─ List scans
+      └─ Upload report to scan
+
+Scans
+  ├─ View all scans
+  ├─ Upload Trivy JSON report
+  ├─ Track report processing status
+  └─ View scan details
+
+Findings
+  ├─ Filter by project
+  ├─ Filter by scan
+  ├─ View vulnerabilities by severity
+  ├─ Click finding for details
+  └─ See remediation guidance
+
+Policies
+  ├─ View policies per environment
+  ├─ Edit thresholds:
+  │   ├─ Max Critical count
+  │   ├─ Max High count
+  │   └─ Max Risk Score
+  └─ Thresholds used for PASS/BLOCK decision
+
+Decisions
+  ├─ View all security decisions
+  ├─ See PASS or BLOCK verdict
+  ├─ View risk scores
+  ├─ See findings counts by severity
+  └─ Click for detailed reasoning
+
+Settings
+  ├─ Check backend connection status
+  ├─ View API latency
+  ├─ See application version
+  └─ Read troubleshooting guide
+```
+
+### Where to Create What
+
+| What | Where | How |
+|------|-------|-----|
+| **Project** | Projects page | Click "Add Project" button |
+| **Pipeline** | Pipelines page | Click "Create Pipeline" button (top right) |
+| **Scan** | Pipelines page → Scans section | Click "Create Scan" button |
+| **Policy** | Policies page | Auto-created on project creation; can edit existing ones |
+| **Report** | Scans page | Click "Upload Report" on a scan |
+
+### Workflow Steps in Detail
+
+**Step 1: Register Project**
+```
+Projects page → "Add Project" → Enter name & repo URL → Create
+↓
+✅ Project registered
+✅ Three policies auto-created (DEV, STAGING, PROD)
+```
+
+**Step 2: Create Pipeline**
+```
+Pipelines page → "Create Pipeline" → Select provider (Jenkins) → Enter job name, build number, branch → Create
+↓
+✅ Pipeline registered
+```
+
+**Step 3: Create Scan**
+```
+Pipelines page → Scans section → "Create Scan" → Select pipeline + environment → Create
+↓
+✅ Scan created (status: PROCESSING)
+```
+
+**Step 4: Upload Report**
+```
+Scans page → Find scan → "Upload Report" → Select Trivy JSON → Upload
+↓
+✅ Report uploaded
+✅ Findings extracted
+✅ Risk score calculated
+```
+
+**Step 5: View Results**
+```
+Findings page → View vulnerabilities by severity
+Decisions page → See PASS or BLOCK verdict
+```
+
+### No Pipeline Creation After Project? Here's What Happened
+
+✅ **Project created** — But no pipelines yet  
+✅ **Policies auto-created** — 3 default policies for DEV/STAGING/PROD  
+❌ **Scans disabled** — "Create Scan" button shows helpful message
+
+**To fix:** Go to **Pipelines** page → Click **"Create Pipeline"** button
+
+### Sample Workflow
+
+```
+1. Create Project: "my-spring-app"
+   → Policies auto-created:
+      ├─ DEVELOPMENT (max 5 critical, 10 high, 100 risk score)
+      ├─ STAGING (max 1 critical, 5 high, 50 risk score)
+      └─ PRODUCTION (max 0 critical, 1 high, 30 risk score)
+
+2. Create Pipeline: "security-scan-pipeline" (Jenkins, build 1, branch main)
+
+3. Create Scan: Pipeline "security-scan-pipeline" for DEV environment
+
+4. Upload Report: Trivy JSON file
+
+5. View Findings: 5 vulnerabilities found
+   ├─ 1 CRITICAL
+   ├─ 2 HIGH
+   └─ 2 MEDIUM
+
+6. View Decision: BLOCK (because 1 CRITICAL > 0 allowed by PRODUCTION policy)
+
+7. Fix vulnerabilities, re-run scan
+
+8. New Decision: PASS ✅
+```
+
+See **`docs/COMPLETE_WORKFLOW_GUIDE.md`** for comprehensive step-by-step walkthrough.

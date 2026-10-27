@@ -6,7 +6,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.secureops.project.Project;
+import com.secureops.scan.Scan;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -59,6 +62,13 @@ public class Pipeline {
     private LocalDateTime createdAt;
 
     /**
+     * One-to-Many relationship: One pipeline has many scans.
+     * Cascade delete: When pipeline is deleted, all scans are deleted.
+     */
+    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Scan> scans = new ArrayList<>();
+
+    /**
      * Constructor for creating new pipelines (ID will be auto-generated).
      */
     public Pipeline(Project project, PipelineProvider provider, String jobName, Long buildNumber, String branch, String commitSha) {
@@ -69,6 +79,7 @@ public class Pipeline {
         this.branch = branch;
         this.commitSha = commitSha;
         this.createdAt = LocalDateTime.now();
+        this.scans = new ArrayList<>();
     }
 
 }

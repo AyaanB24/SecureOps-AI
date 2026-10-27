@@ -6,7 +6,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.secureops.scan.Scan;
+import com.secureops.finding.Finding;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -62,6 +65,13 @@ public class Report {
     private LocalDateTime receivedAt;
 
     /**
+     * One-to-Many relationship: One report has many findings.
+     * Cascade delete: When report is deleted, all findings are deleted.
+     */
+    @OneToMany(mappedBy = "report", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Finding> findings = new ArrayList<>();
+
+    /**
      * Constructor for creating new reports (ID will be auto-generated).
      */
     public Report(Scan scan, ReportTool tool, String fileName, String filePath) {
@@ -71,6 +81,7 @@ public class Report {
         this.filePath = filePath;
         this.status = ReportStatus.RECEIVED;
         this.receivedAt = LocalDateTime.now();
+        this.findings = new ArrayList<>();
     }
 
 }

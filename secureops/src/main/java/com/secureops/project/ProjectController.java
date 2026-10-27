@@ -78,4 +78,20 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Delete a project by ID.
+     * DELETE /api/projects/{projectId}
+     *
+     * @param projectId UUID of the project to delete
+     * @return ResponseEntity with HTTP 204 No Content
+     * @throws ProjectNotFoundException if project does not exist (converted to HTTP 404)
+     */
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<Void> deleteProject(@PathVariable UUID projectId) {
+        log.info("Deleting project: {}", projectId);
+        projectService.deleteProject(projectId);
+        log.info("Project deleted successfully: {}", projectId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

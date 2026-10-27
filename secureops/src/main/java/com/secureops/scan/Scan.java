@@ -7,7 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.secureops.project.Project;
 import com.secureops.pipeline.Pipeline;
+import com.secureops.report.Report;
+import com.secureops.decision.SecurityDecision;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -61,6 +65,20 @@ public class Scan {
     private LocalDateTime completedAt;
 
     /**
+     * One-to-Many relationship: One scan has many reports.
+     * Cascade delete: When scan is deleted, all reports are deleted.
+     */
+    @OneToMany(mappedBy = "scan", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Report> reports = new ArrayList<>();
+
+    /**
+     * One-to-One relationship: One scan has one security decision.
+     * Cascade delete: When scan is deleted, the decision is deleted.
+     */
+    @OneToOne(mappedBy = "scan", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private SecurityDecision decision;
+
+    /**
      * Constructor for creating new scans (ID will be auto-generated).
      */
     public Scan(Project project, Pipeline pipeline, Environment environment) {
@@ -69,6 +87,7 @@ public class Scan {
         this.environment = environment;
         this.status = ScanStatus.CREATED;
         this.startedAt = LocalDateTime.now();
+        this.reports = new ArrayList<>();
     }
 
 }
