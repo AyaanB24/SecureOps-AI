@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Package, GitBranch, Shield, Search, CheckCircle, Lock, Sparkles, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, GitBranch, Shield, Search, CheckCircle, Lock, Sparkles, Settings, Key } from 'lucide-react'
 import clsx from 'clsx'
 
 interface SidebarProps {
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { label: 'Decisions', path: '/decisions', icon: <CheckCircle className="w-5 h-5" /> },
   { label: 'Policies', path: '/policies', icon: <Lock className="w-5 h-5" /> },
   { label: 'AI Analysis', path: '/ai-analysis', icon: <Sparkles className="w-5 h-5" /> },
+  { label: 'Credentials', path: '/credentials', icon: <Key className="w-5 h-5" /> },
   { label: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" /> },
 ]
 

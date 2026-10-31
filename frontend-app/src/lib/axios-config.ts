@@ -10,9 +10,14 @@ export const apiClient: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor
+// Request interceptor - add JWT token to all requests
 apiClient.interceptors.request.use(
   (config) => {
+    // Get token from localStorage
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   (error) => Promise.reject(error)

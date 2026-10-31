@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useProjects } from '@/hooks/useProjects'
 import { projectService } from '@/services/projectService'
+import { useNavigate } from 'react-router-dom'
 import { PageHeading } from '@/components/common/PageHeading'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
@@ -20,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 export default function Projects() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { data: projects = [], isLoading, error, refetch } = useProjects()
   
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -200,10 +202,10 @@ export default function Projects() {
               </thead>
               <tbody>
                 {projects.map(project => (
-                  <tr key={project.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <tr key={project.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900">{project.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{project.id}</p>
+                      <p className="font-medium text-blue-600 hover:text-blue-700 hover:underline">{project.name}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-mono">{project.id}</p>
                     </td>
                     <td className="px-6 py-4">
                       {project.repositoryUrl ? (

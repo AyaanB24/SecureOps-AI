@@ -5,6 +5,8 @@ import com.secureops.project.dto.ProjectResponse;
 import com.secureops.policy.PolicyEnvironment;
 import com.secureops.policy.PolicyService;
 import com.secureops.policy.dto.CreatePolicyRequest;
+import com.secureops.common.exception.AccessDeniedException;
+import com.secureops.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,9 +17,9 @@ import java.util.stream.Collectors;
 
 /**
  * FILE: src/main/java/com/secureops/project/ProjectService.java
- * PURPOSE: Business logic for project management.
- * WHY IT EXISTS: Encapsulates CRUD operations and validation; keeps controller thin and testable.
- * DEPENDENCIES: Uses ProjectRepository for database access; converts between entities and DTOs.
+ * PURPOSE: Business logic for project management with authorization checks.
+ * WHY IT EXISTS: Encapsulates CRUD operations, validation, and ownership verification.
+ * DEPENDENCIES: Uses ProjectRepository for database access; enforces RBAC via service layer.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,27 +31,195 @@ public class ProjectService {
     private final PolicyService policyService;
 
     /**
-     * Create a new project.
+     * Get all projects accessible by user (with authorization check).
+     * - ADMIN: All projects
+     * - USER: Own projects + system projects (owner_id IS NULL)
+     * - SERVICE_ACCOUNT: System projects only (for CI/CD tools via API key)
+     *
+     * @param userId Current user ID (from JWT or API key)
+     * @param role Current user role (from JWT or API key)
+     * @return List of accessible projects
+     */
+    public List<ProjectResponse> getAllProjects(UUID userId, UserRole role) {
+        List<Project> projects;
+        
+        if (role == UserRole.ADMIN) {
+            // Admins see all projects
+            projects = projectRepository.findAll();
+        } else if (role == UserRole.SERVICE_ACCOUNT) {
+            // Service accounts (Jenkins/CI) see only system projects (owner_id IS NULL)
+            // Query: SELECT p FROM Project p WHERE p.ownerId IS NULL
+            projects = projectRepository.findAccessibleProjects(UUID.randomUUID())
+                .stream()
+                .filter(p -> p.getOwnerId() == null)
+                .collect(Collectors.toList());
+        } else {
+            // Users see: own projects + system projects
+            projects = projectRepository.findAccessibleProjects(userId);
+        }
+        
+        return projects.stream()
+            .map(ProjectResponse::fromEntity)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Get single project with ownership verification (prevents IDOR).
+     *
+     * @param projectId Project UUID
+     * @param userId Current user ID (from JWT)
+     * @param role Current user role (from JWT)
+     * @return ProjectResponse if authorized
+     * @throws ProjectNotFoundException if not found
+     * @throws AccessDeniedException if user lacks permission
+     */
+    public ProjectResponse getProjectById(UUID projectId, UUID userId, UserRole role) {
+        Project project = projectRepository.findById(projectId)
+            .orElseThrow(() -> new ProjectNotFoundException(projectId.toString()));
+        
+        // Check access
+        if (!canAccessProject(project, userId, role)) {
+            throw new AccessDeniedException("You do not have permission to access this project");
+        }
+        
+        return ProjectResponse.fromEntity(project);
+    }
+
+    /**
+     * Create a new project with ownership assignment.
+     * If created by SERVICE_ACCOUNT (via API key), project is a system project (owner_id IS NULL).
+     * If created by regular USER, project is owned by that user.
      * Auto-creates default security policies for all environments (DEV, STAGING, PROD).
      *
      * @param request CreateProjectRequest with name and optional repositoryUrl
+     * @param userId Current user/service account ID
+     * @param role Current user role (USER or SERVICE_ACCOUNT)
      * @return ProjectResponse containing created project data
      * @throws DuplicateProjectException if a project with the same name already exists
      */
-    public ProjectResponse createProject(CreateProjectRequest request) {
+    public ProjectResponse createProject(CreateProjectRequest request, UUID userId, UserRole role) {
         // Check if project with this name already exists
         if (projectRepository.findByName(request.getName()).isPresent()) {
             throw new DuplicateProjectException(request.getName());
         }
 
         Project project = new Project(request.getName(), request.getRepositoryUrl());
+        
+        // If created via API key (SERVICE_ACCOUNT), make it a system project (owner_id = NULL)
+        // Otherwise assign ownership to the user
+        if (role == UserRole.SERVICE_ACCOUNT) {
+            project.setOwnerId(null); // System project - accessible to all via API key
+            log.info("System project created: {} (via API key) for service account: {}", project.getName(), userId);
+        } else {
+            project.setOwnerId(userId); // User-owned project
+            log.info("Project created: {} with name: {} owned by user: {}", project.getId(), project.getName(), userId);
+        }
+        
         Project saved = projectRepository.save(project);
-        log.info("Project created: {} with name: {}", saved.getId(), saved.getName());
 
         // Auto-create default policies for all environments
         createDefaultPolicies(saved.getId());
 
         return ProjectResponse.fromEntity(saved);
+    }
+    
+    /**
+     * Legacy overload for backward compatibility (assumes USER role).
+     */
+    public ProjectResponse createProject(CreateProjectRequest request, UUID userId) {
+        return createProject(request, userId, UserRole.USER);
+    }
+
+    /**
+     * Delete project with ownership verification.
+     * - Project owner can delete their own projects
+     * - ADMIN can delete any project
+     * - System projects (owner_id IS NULL) can be deleted by any authenticated user
+     *
+     * @param projectId Project UUID
+     * @param userId Current user ID (from JWT)
+     * @param role Current user role (from JWT)
+     * @throws ProjectNotFoundException if not found
+     * @throws AccessDeniedException if user is not owner and not admin and not system project
+     */
+    public void deleteProject(UUID projectId, UUID userId, UserRole role) {
+        Project project = projectRepository.findById(projectId)
+            .orElseThrow(() -> new ProjectNotFoundException(projectId.toString()));
+        
+        // Allow deletion if:
+        // 1. User is the project owner
+        if (isProjectOwner(project, userId)) {
+            projectRepository.delete(project);
+            log.info("Project deleted: {} by owner: {}", projectId, userId);
+            return;
+        }
+        
+        // 2. User is an admin
+        if (role == UserRole.ADMIN) {
+            projectRepository.delete(project);
+            log.info("Project deleted: {} by admin: {}", projectId, userId);
+            return;
+        }
+        
+        // 3. System project (owner_id IS NULL) - allow any authenticated user to delete
+        if (project.getOwnerId() == null) {
+            projectRepository.delete(project);
+            log.info("System project deleted: {} by user: {}", projectId, userId);
+            return;
+        }
+        
+        // Otherwise deny access
+        throw new AccessDeniedException("Only project owner or admin can delete this project");
+    }
+
+    /**
+     * Find a project by name (for Jenkins integration).
+     * Used by Jenkins to identify existing projects before creating new ones.
+     *
+     * @param name Name of the project to find
+     * @return ProjectResponse containing project data
+     * @throws ProjectNotFoundException if project does not exist
+     */
+    public ProjectResponse getProjectByName(String name) {
+        Project project = projectRepository.findByName(name)
+            .orElseThrow(() -> new ProjectNotFoundException("Project not found with name: " + name));
+        return ProjectResponse.fromEntity(project);
+    }
+
+    /**
+     * Helper: Can user access this project?
+     * - ADMIN: Always yes
+     * - USER: Yes if owner or system project (owner_id IS NULL)
+     * - SERVICE_ACCOUNT: Only system projects (owner_id IS NULL) - for Jenkins/CI integration
+     */
+    private boolean canAccessProject(Project project, UUID userId, UserRole role) {
+        // Admins can access all projects
+        if (role == UserRole.ADMIN) {
+            return true;
+        }
+        
+        // Service accounts can only access system projects (for Jenkins/CI)
+        if (role == UserRole.SERVICE_ACCOUNT) {
+            return project.getOwnerId() == null;
+        }
+        
+        // Users can access: own projects + system projects (owner_id IS NULL)
+        if (isProjectOwner(project, userId)) {
+            return true;
+        }
+        
+        if (project.getOwnerId() == null) {
+            return true; // System project accessible to all users
+        }
+        
+        return false;
+    }
+
+    /**
+     * Helper: Is this user the project owner?
+     */
+    private boolean isProjectOwner(Project project, UUID userId) {
+        return project.getOwnerId() != null && project.getOwnerId().equals(userId);
     }
 
     /**
@@ -98,60 +268,8 @@ public class ProjectService {
         } catch (Exception e) {
             log.error("Error creating default policies for project: {}", projectId, e);
             // Don't fail project creation if policy creation fails, but log the error
-            // This is a best-effort operation
         }
     }
 
-    /**
-     * Get all projects.
-     *
-     * @return List of ProjectResponse DTOs
-     */
-    public List<ProjectResponse> getAllProjects() {
-        return projectRepository.findAll()
-            .stream()
-            .map(ProjectResponse::fromEntity)
-            .collect(Collectors.toList());
-    }
-
-    /**
-     * Get a specific project by ID.
-     *
-     * @param projectId UUID of the project
-     * @return ProjectResponse containing project data
-     * @throws ProjectNotFoundException if project does not exist
-     */
-    public ProjectResponse getProjectById(UUID projectId) {
-        Project project = projectRepository.findById(projectId)
-            .orElseThrow(() -> new ProjectNotFoundException(projectId.toString()));
-        return ProjectResponse.fromEntity(project);
-    }
-
-    /**
-     * Find a project by name.
-     * Used by Jenkins to identify existing projects before creating new ones.
-     *
-     * @param name Name of the project to find
-     * @return ProjectResponse containing project data
-     * @throws ProjectNotFoundException if project does not exist
-     */
-    public ProjectResponse getProjectByName(String name) {
-        Project project = projectRepository.findByName(name)
-            .orElseThrow(() -> new ProjectNotFoundException("Project not found with name: " + name));
-        return ProjectResponse.fromEntity(project);
-    }
-
-    /**
-     * Delete a project by ID.
-     * This will cascade delete all associated pipelines, scans, reports, findings, and decisions.
-     *
-     * @param projectId UUID of the project to delete
-     * @throws ProjectNotFoundException if project does not exist
-     */
-    public void deleteProject(UUID projectId) {
-        Project project = projectRepository.findById(projectId)
-            .orElseThrow(() -> new ProjectNotFoundException(projectId.toString()));
-        projectRepository.delete(project);
-    }
-
 }
+

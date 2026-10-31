@@ -10,6 +10,8 @@ import com.secureops.report.parser.ReportParsingException;
 import com.secureops.finding.FindingNotFoundException;
 import com.secureops.policy.PolicyNotFoundException;
 import com.secureops.decision.SecurityDecisionNotFoundException;
+import com.secureops.auth.exception.DuplicateEmailException;
+import com.secureops.auth.exception.InvalidCredentialsException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -88,6 +90,27 @@ public class GlobalExceptionHandler {
         log.warn("Security decision not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("NOT_FOUND", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex) {
+        log.warn("Duplicate email during registration: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("DUPLICATE_EMAIL", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
+        log.warn("Invalid login credentials attempted");
+        ErrorResponse error = new ErrorResponse("INVALID_CREDENTIALS", "Invalid email or password");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse("ACCESS_DENIED", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     @ExceptionHandler(ReportParsingException.class)

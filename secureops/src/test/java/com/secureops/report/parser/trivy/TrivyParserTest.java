@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.*;
  * 8. Real Trivy JSON with object-valued CVSS field
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @DisplayName("Trivy Parser Tests - CVSS Deserialization and Finding Extraction")
 public class TrivyParserTest {
 

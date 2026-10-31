@@ -46,6 +46,14 @@ public class Project {
     private LocalDateTime createdAt;
 
     /**
+     * Project owner (user who created the project).
+     * NULL = System project (created by Jenkins or pre-existing).
+     * Phase 5: Used for ownership-based authorization.
+     */
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
+    /**
      * One-to-Many relationship: One project has many pipelines.
      * Cascade delete: When project is deleted, all pipelines are deleted.
      * Note: Scans are NOT cascaded here; they are deleted through Pipeline → Scan cascade
