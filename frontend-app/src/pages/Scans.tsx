@@ -16,6 +16,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Dialog } from '@/components/common/Dialog'
 import { ReportStatusBadge } from '@/components/common/ReportStatusBadge'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { AiSummaryCard } from '@/components/ai/AiSummaryCard'
 import { AlertCircle, Upload, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Scan, Report, Finding } from '@/types/project'
@@ -205,6 +206,10 @@ export default function Scans() {
                     {/* Scan Expanded Content */}
                     {isExpanded && (
                       <div className="border-t border-gray-200 p-4 space-y-4">
+                        {/* AI Analysis Summary */}
+                        <AiSummaryCard scanId={scan.id} />
+
+                        {/* Reports and Findings */}
                         <ScanReportsSection
                           scanId={scan.id}
                           onProcessReport={handleProcessReport}

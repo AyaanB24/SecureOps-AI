@@ -14,7 +14,8 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Button } from '@/components/common/Button'
 import { Dialog } from '@/components/common/Dialog'
 import { StatusBadge } from '@/components/common/StatusBadge'
-import { AlertCircle, Search, X, Filter } from 'lucide-react'
+import { AiExplanationModal } from '@/components/ai/AiExplanationModal'
+import { AlertCircle, Search, X, Filter, Sparkles } from 'lucide-react'
 import { Finding, Severity, FindingStatus } from '@/types/project'
 
 const SEVERITY_OPTIONS: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
@@ -51,6 +52,7 @@ export default function Findings() {
 
   const [showFindingDetail, setShowFindingDetail] = useState(false)
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
+  const [showAiExplanation, setShowAiExplanation] = useState(false)
 
   // Apply filters
   const filteredFindings = findingService.filterFindings(allFindings, {
@@ -460,7 +462,14 @@ export default function Findings() {
               </p>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-gray-200">
+            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
+              <Button
+                onClick={() => setShowAiExplanation(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Sparkles size={16} className="mr-2" />
+                AI Explain & Fix
+              </Button>
               <Button
                 variant="secondary"
                 onClick={() => setShowFindingDetail(false)}
@@ -471,6 +480,16 @@ export default function Findings() {
           </div>
         )}
       </Dialog>
+
+      {/* AI Explanation Modal */}
+      {selectedFinding && (
+        <AiExplanationModal
+          isOpen={showAiExplanation}
+          onClose={() => setShowAiExplanation(false)}
+          findingId={selectedFinding.id}
+          findingTitle={selectedFinding.title}
+        />
+      )}
     </>
   )
 }

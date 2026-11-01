@@ -18,28 +18,28 @@ export default function AIAnalysis() {
       <div className="space-y-6 max-w-4xl">
         <PageHeading title="AI Analysis" />
 
-        {/* Coming Soon Banner */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 flex items-start space-x-4">
-          <Sparkles size={32} className="text-blue-600 flex-shrink-0 mt-0.5" />
+        {/* Live Banner */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6 flex items-start space-x-4">
+          <Sparkles size={32} className="text-green-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h2 className="text-xl font-semibold text-blue-900 mb-2">
-              AI Analysis Coming Soon
+            <h2 className="text-xl font-semibold text-green-900 mb-2">
+              ✓ AI Analysis is Live
             </h2>
-            <p className="text-blue-800 mb-4">
-              Advanced AI-powered analysis features are currently under development. This will
-              include root-cause analysis, remediation recommendations, and automated insights
-              powered by machine learning models.
+            <p className="text-green-800 mb-4">
+              AI-powered analysis is now available for your security findings. Get instant
+              root-cause analysis, remediation recommendations, and automated insights powered
+              by Google Gemini AI.
             </p>
-            <div className="space-y-2 text-sm text-blue-800">
+            <div className="space-y-2 text-sm text-green-800">
               <div className="flex items-center space-x-2">
-                <span className="font-medium">Planned Features:</span>
+                <span className="font-medium">Live Features:</span>
               </div>
               <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>Root-cause analysis for vulnerability findings</li>
-                <li>Automated remediation recommendations</li>
-                <li>Risk assessment and prioritization</li>
-                <li>Security best practices suggestions</li>
-                <li>Trend analysis and predictions</li>
+                <li>AI root-cause analysis for each finding</li>
+                <li>Smart remediation recommendations with version suggestions</li>
+                <li>Scan-level security assessment and summary</li>
+                <li>Security best practices and configuration suggestions</li>
+                <li>Intelligent caching for cost optimization</li>
               </ul>
             </div>
           </div>
@@ -67,13 +67,13 @@ export default function AIAnalysis() {
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
               <h4 className="font-medium text-yellow-900 mb-2 flex items-center space-x-2">
                 <Clock size={16} />
-                <span>In Development</span>
+                <span>Setup Required</span>
               </h4>
               <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                <li>AI root-cause analysis</li>
-                <li>Smart remediation recommendations</li>
-                <li>Contextual security suggestions</li>
-                <li>Automated report generation</li>
+                <li>Set <code className="bg-yellow-100 px-2 py-1 rounded">GEMINI_API_KEY</code> environment variable on backend</li>
+                <li>Restart backend service after setting API key</li>
+                <li>AI features activate automatically once backend is running</li>
+                <li>See "Setup Instructions" section below for details</li>
               </ul>
             </div>
 
@@ -149,6 +149,57 @@ export default function AIAnalysis() {
           </div>
         </Card>
 
+        {/* Setup Instructions */}
+        <Card>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Setup Instructions
+          </h3>
+
+          <div className="space-y-4 text-sm text-gray-700">
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+              <h4 className="font-semibold text-blue-900 mb-2">1. Get Your Gemini API Key</h4>
+              <p className="mb-2">
+                Visit <a href="https://aistudio.google.com/app/apikeys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a> to get a free API key.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+              <h4 className="font-semibold text-blue-900 mb-2">2. Set Environment Variable</h4>
+              <p className="mb-2">On your backend server, set:</p>
+              <code className="block bg-gray-800 text-green-400 p-3 rounded font-mono text-xs mb-2 overflow-x-auto">
+                export GEMINI_API_KEY=your-api-key-here
+              </code>
+              <p className="text-xs text-gray-600">Or on Windows (PowerShell):</p>
+              <code className="block bg-gray-800 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+                $env:GEMINI_API_KEY='your-api-key-here'
+              </code>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+              <h4 className="font-semibold text-blue-900 mb-2">3. Start Backend</h4>
+              <p className="mb-2">Run the backend with:</p>
+              <code className="block bg-gray-800 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+                java -jar target/secureops-0.0.1-SNAPSHOT.jar
+              </code>
+              <p className="text-xs text-gray-600 mt-2">Or use Maven:</p>
+              <code className="block bg-gray-800 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+                mvn spring-boot:run
+              </code>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-4 rounded">
+              <h4 className="font-semibold text-green-900 mb-2">✓ Ready to Use</h4>
+              <p>
+                Once the backend is running, AI features are available:
+              </p>
+              <ul className="list-disc list-inside mt-2 space-y-1 ml-2">
+                <li>Click <strong>"AI Explain & Fix"</strong> button on any finding in Findings page</li>
+                <li>View AI analysis in the Scans page expanded view</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+
         {/* Data Privacy & Safety */}
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
@@ -158,16 +209,16 @@ export default function AIAnalysis() {
 
           <div className="space-y-3 text-sm text-gray-700">
             <p>
-              <strong>Local Processing:</strong> AI analysis will be performed on your private
-              backend infrastructure. No code or findings will be sent to external AI services.
+              <strong>AI Service:</strong> Uses Google Gemini API for analysis. Only finding
+              metadata and vulnerability data is sent (no source code sent to external services).
             </p>
             <p>
-              <strong>Model Customization:</strong> AI models will be customized to your
-              security policies and coding standards.
+              <strong>Caching:</strong> Analysis results are cached in your database to minimize
+              API calls and reduce costs.
             </p>
             <p>
-              <strong>Audit Trail:</strong> All AI recommendations will be logged and auditable
-              for compliance purposes.
+              <strong>Audit Trail:</strong> All AI recommendations are logged with timestamps
+              for compliance and audit purposes.
             </p>
             <p>
               <strong>Manual Review:</strong> AI suggestions should always be reviewed by

@@ -40,4 +40,6 @@ public interface FindingRepository extends JpaRepository<Finding, UUID> {
      */
     List<Finding> findByReportIdAndSeverity(UUID reportId, Severity severity);
 
+
+
 }
