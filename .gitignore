@@ -47,4 +47,10 @@ secureops/reports/
 
 DELETE_PROJECT_SIMPLE.sql
 
+.env
+.env.*
+!.env.example
+application-local.properties
+application-secret.properties
+
 
